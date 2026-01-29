@@ -1,30 +1,32 @@
 import { task, pipeline } from "builderman";
+import { pnpm } from "@builderman/resolvers-pnpm";
 
 const args = process.argv.slice(2);
+
+const buildCommand = {
+  run: "pnpm build",
+  cache: {
+    inputs: ["src", pnpm.package()],
+    outputs: ["dist"],
+  },
+};
 
 const shared = task({
   name: "shared",
   cwd: "apps/shared",
   commands: {
-    build: "pnpm build",
+    build: buildCommand,
     dev: {
       run: "pnpm dev",
       readyWhen: (output) => output.includes("Watching for file changes."),
     },
   },
-  dependencies: [],
 });
 
 const server = task({
   name: "server",
   cwd: "apps/server",
-  commands: {
-    build: "pnpm build",
-    dev: {
-      run: "pnpm dev",
-      readyWhen: (output) => output.includes("Server is running on"),
-    },
-  },
+  commands: buildCommand,
   dependencies: [shared],
 });
 
@@ -33,7 +35,13 @@ const client = task({
   cwd: "apps/client",
   commands: {
     dev: "pnpm dev",
-    build: "pnpm build",
+    build: {
+      run: "pnpm build",
+      cache: {
+        inputs: [".", pnpm.package()],
+        outputs: ["dist"],
+      },
+    },
     preview: "pnpm preview",
   },
   dependencies: [shared, server],
