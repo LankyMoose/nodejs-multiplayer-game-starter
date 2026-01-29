@@ -1,6 +1,7 @@
 import { computed, signal } from "kiru"
 import { createAuthClient } from "better-auth/client"
 import type { Session, User } from "better-auth"
+import { withMinDuration } from "../utils"
 
 window.__kiru.on("mount", (ctx) => ctx.name === "client" && updateAuthState())
 
@@ -35,9 +36,9 @@ export const user = computed(() => authState.value.user)
 
 export async function updateAuthState() {
   authState.value = { ...authState.value, isLoading: true }
-  const { error, data } = await authClient.getSession()
-
-  await new Promise((resolve) => setTimeout(resolve, 1000))
+  const { error, data } = await withMinDuration(500, () =>
+    authClient.getSession()
+  )
 
   const nextState: AuthState = {
     user: null,
@@ -58,6 +59,6 @@ export async function updateAuthState() {
 }
 
 export async function signOut() {
-  await authClient.signOut()
+  await withMinDuration(500, () => authClient.signOut())
   await updateAuthState()
 }
