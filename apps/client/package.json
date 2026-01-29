@@ -17,6 +17,7 @@
     "vite-plugin-kiru": "^0.31.0"
   },
   "dependencies": {
+    "better-auth": "^1.4.0",
     "kiru": "^0.53.0",
     "shared": "workspace:*"
   }

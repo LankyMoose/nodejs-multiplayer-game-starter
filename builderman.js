@@ -26,7 +26,13 @@ const shared = task({
 const server = task({
   name: "server",
   cwd: "apps/server",
-  commands: buildCommand,
+  commands: {
+    build: buildCommand,
+    dev: {
+      run: "pnpm dev",
+      readyWhen: (output) => output.includes("Server listening on"),
+    },
+  },
   dependencies: [shared],
 });
 
