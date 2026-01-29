@@ -64,12 +64,10 @@ app.route({
 app.get("/ws", { websocket: true }, (socket, req) => {
   app.log.info({ url: req.url }, "WebSocket client connected");
 
-  const server = createServerRouter<WebSocketContract>(
+  const router = createServerRouter<WebSocketContract>(
     {
-      send(message) {
-        socket.send(JSON.stringify(message));
-      },
-      onMessage(cb) {
+      send: (message) => socket.send(JSON.stringify(message)),
+      onMessage: (cb) => {
         const handler: (this: WebSocket, ...args: any[]) => void = (
           raw: Buffer
         ) => {
@@ -81,9 +79,8 @@ app.get("/ws", { websocket: true }, (socket, req) => {
       },
     },
     {
-      ping: async () => "pong" as const,
-
-      "match:join": async ({ id }) => {
+      ping: () => "pong",
+      "match:join": ({ id }) => {
         app.log.info({ id }, "Client joined match");
         return { success: false };
       },
@@ -92,11 +89,11 @@ app.get("/ws", { websocket: true }, (socket, req) => {
 
   socket.on("close", () => {
     app.log.info("WebSocket client disconnected");
-    server.dispose();
+    router.dispose();
   });
 
   // Example: emit a server event
-  server.emit("match:started", "match-123");
+  router.emit("match:started", "match-123");
 });
 
 app.get("/", async (_, reply) => {
