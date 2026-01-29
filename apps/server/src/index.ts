@@ -61,23 +61,25 @@ app.route({
   },
 });
 
+const createWsTransport = (socket: WebSocket): Transport => ({
+  send: (message) => socket.send(JSON.stringify(message)),
+  onMessage: (cb) => {
+    const handler: (this: WebSocket, ...args: any[]) => void = (
+      raw: Buffer
+    ) => {
+      const msg = JSON.parse(raw.toString()) as WireMessage;
+      cb(msg);
+    };
+    socket.on("message", handler);
+    return () => socket.off("message", handler);
+  },
+});
+
 app.get("/ws", { websocket: true }, (socket, req) => {
   app.log.info({ url: req.url }, "WebSocket client connected");
 
   const router = createServerRouter<WebSocketContract>(
-    {
-      send: (message) => socket.send(JSON.stringify(message)),
-      onMessage: (cb) => {
-        const handler: (this: WebSocket, ...args: any[]) => void = (
-          raw: Buffer
-        ) => {
-          const msg = JSON.parse(raw.toString()) as WireMessage;
-          cb(msg);
-        };
-        socket.on("message", handler);
-        return () => socket.off("message", handler);
-      },
-    },
+    createWsTransport(socket),
     {
       ping: () => "pong",
       "match:join": ({ id }) => {
