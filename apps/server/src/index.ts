@@ -2,6 +2,13 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
 import { auth } from "./auth.js";
+import type { WebSocket } from "ws";
+import {
+  createServerRouter,
+  type Transport,
+  type WireMessage,
+  type WebSocketContract,
+} from "shared";
 
 const app = Fastify({ logger: true });
 
@@ -54,18 +61,42 @@ app.route({
   },
 });
 
-// WebSocket example: /ws
 app.get("/ws", { websocket: true }, (socket, req) => {
   app.log.info({ url: req.url }, "WebSocket client connected");
-  socket.on("message", (raw) => {
-    const data = raw.toString();
-    app.log.debug({ data }, "WS message");
-    socket.send(`echo: ${data}`);
-  });
+
+  const server = createServerRouter<WebSocketContract>(
+    {
+      send(message) {
+        socket.send(JSON.stringify(message));
+      },
+      onMessage(cb) {
+        const handler: (this: WebSocket, ...args: any[]) => void = (
+          raw: Buffer
+        ) => {
+          const msg = JSON.parse(raw.toString()) as WireMessage;
+          cb(msg);
+        };
+        socket.on("message", handler);
+        return () => socket.off("message", handler);
+      },
+    },
+    {
+      ping: async () => "pong" as const,
+
+      "match:join": async ({ id }) => {
+        app.log.info({ id }, "Client joined match");
+        return { success: false };
+      },
+    }
+  );
+
   socket.on("close", () => {
     app.log.info("WebSocket client disconnected");
+    server.dispose();
   });
-  7;
+
+  // Example: emit a server event
+  server.emit("match:started", "match-123");
 });
 
 app.get("/", async (_, reply) => {
