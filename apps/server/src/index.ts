@@ -8,7 +8,9 @@ import {
   type Transport,
   type WireMessage,
   type WebSocketContract,
+  WS_CLOSE_UNAUTHORIZED,
 } from "shared";
+import { fastifyRequestToRequest, fastifyHeadersToHeaders } from "./utils.js";
 
 const app = Fastify({ logger: true });
 
@@ -28,25 +30,9 @@ app.route({
   url: "/api/auth/*",
   handler: async (request, reply) => {
     try {
-      const url = new URL(
-        request.url,
-        `http://${request.headers.host ?? "localhost"}`,
-      );
-      const headers = new Headers();
-      for (const [key, value] of Object.entries(request.headers)) {
-        if (value !== undefined) {
-          headers.append(key, Array.isArray(value) ? value.join(", ") : value);
-        }
-      }
-      const req = new Request(url.toString(), {
-        method: request.method,
-        headers,
-        body:
-          request.body !== undefined && request.body !== null
-            ? JSON.stringify(request.body)
-            : null,
-      });
+      const req = fastifyRequestToRequest(request);
       const response = await auth.handler(req);
+      console.log("auth response", response);
       reply.status(response.status);
       response.headers.forEach((value, key) => reply.header(key, value));
       const body = response.body ? await response.text() : null;
@@ -75,8 +61,32 @@ const createWsTransport = (socket: WebSocket): Transport => ({
   },
 });
 
-app.get("/ws", { websocket: true }, (socket, req) => {
-  app.log.info({ url: req.url }, "WebSocket client connected");
+app.get("/ws", { websocket: true }, async (socket, req) => {
+  let session: Awaited<ReturnType<typeof auth.api.getSession>>;
+
+  console.log("ws request", req.headers);
+
+  try {
+    session = await auth.api.getSession({
+      headers: fastifyHeadersToHeaders(req.headers),
+    });
+    console.log("ws session", session);
+  } catch (err) {
+    app.log.warn(err, "WebSocket auth: getSession failed");
+    socket.close(WS_CLOSE_UNAUTHORIZED, "Authentication failed");
+    return;
+  }
+
+  if (!session) {
+    app.log.info({ url: req.url }, "WebSocket connection rejected: no session");
+    socket.close(WS_CLOSE_UNAUTHORIZED, "Unauthorized");
+    return;
+  }
+
+  app.log.info(
+    { url: req.url, userId: session.user.id },
+    "WebSocket client connected",
+  );
 
   const router = createServerRouter<WebSocketContract>(
     createWsTransport(socket),

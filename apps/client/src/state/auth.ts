@@ -2,11 +2,14 @@ import { computed, signal } from "kiru"
 import { createAuthClient } from "better-auth/client"
 import type { Session, User } from "better-auth"
 import { withMinDuration } from "../utils"
+import { env } from "../env"
 
 window.__kiru.on("mount", (ctx) => ctx.name === "client" && updateAuthState())
 
-export const authClient = createAuthClient({
-  baseURL: import.meta.env.VITE_BETTER_AUTH_URL,
+const protocol = import.meta.env.DEV ? "http" : "https"
+
+const authClient = createAuthClient({
+  baseURL: `${protocol}://${env.HOST}${env.PORT}/api/auth`,
 })
 
 type GetSessionError = {
@@ -20,22 +23,35 @@ interface AuthState {
   isLoading: boolean
   error: GetSessionError | null
 }
-export const authState = signal<AuthState>({
+
+const _authState = signal<AuthState>({
   user: null,
   session: null,
   isLoading: true,
   error: null,
 })
 
-export const isAuthenticated = computed(
-  () => !!authState.value.session && !!authState.value.user
+const isAuthenticated = computed(
+  () => !!_authState.value.session && !!_authState.value.user
 )
-export const isAuthLoading = computed(() => authState.value.isLoading)
-export const authError = computed(() => authState.value.error)
-export const user = computed(() => authState.value.user)
+const isLoading = computed(() => _authState.value.isLoading)
+const error = computed(() => _authState.value.error)
+const user = computed(() => _authState.value.user)
 
-export async function updateAuthState() {
-  authState.value = { ...authState.value, isLoading: true }
+export const auth = {
+  isAuthenticated,
+  isLoading,
+  error,
+  user,
+  update: updateAuthState,
+  signOut: () =>
+    authClient.signOut().finally(() => (window.location.href = "/")),
+  client: authClient,
+  _internal: _authState,
+}
+
+async function updateAuthState() {
+  _authState.value = { ..._authState.value, isLoading: true }
   const { error, data } = await withMinDuration(500, () =>
     authClient.getSession()
   )
@@ -55,10 +71,5 @@ export async function updateAuthState() {
     nextState.session = session
   }
 
-  authState.value = nextState
-}
-
-export async function signOut() {
-  await withMinDuration(500, () => authClient.signOut())
-  await updateAuthState()
+  _authState.value = nextState
 }

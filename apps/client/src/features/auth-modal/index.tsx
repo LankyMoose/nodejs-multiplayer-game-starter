@@ -1,6 +1,6 @@
-import { computed, Derive, signal, useState } from "kiru"
-import { authClient, authError, updateAuthState } from "../../state"
+import { computed, Derive, signal, StyleObject, useState } from "kiru"
 import { validateDisplayName } from "shared"
+import { auth } from "@/state/auth"
 
 type FormMode = "signin" | "signup"
 
@@ -15,37 +15,34 @@ async function handleSubmit(e: Event, mode: FormMode) {
   submitError.value = null
   isSubmitting.value = true
 
-  try {
-    if (mode === "signup") {
-      const displayNameError = validateDisplayName(displayName.value.trim())
-      if (displayNameError) {
-        submitError.value = displayNameError
-        return
-      }
-      const { error } = await authClient.signUp.email({
-        email: email.value,
-        password: password.value,
-        name: displayName.value.trim() || "User",
-      })
-      if (error) {
-        const msg = (error as { message?: string }).message
-        submitError.value = msg ? String(msg) : "Sign up failed"
-        return
-      }
-    } else {
-      const { error } = await authClient.signIn.email({
-        email: email.value,
-        password: password.value,
-      })
-      if (error) {
-        const msg = (error as { message?: string }).message
-        submitError.value = msg ? String(msg) : "Sign in failed"
-        return
-      }
+  if (mode === "signup") {
+    const displayNameError = validateDisplayName(displayName.value.trim())
+    if (displayNameError) {
+      submitError.value = displayNameError
+      return
     }
-    await updateAuthState()
-  } finally {
-    isSubmitting.value = false
+    const { error } = await auth.client.signUp.email({
+      email: email.value,
+      password: password.value,
+      name: displayName.value.trim() || "User",
+      callbackURL: "/",
+    })
+    if (error) {
+      const msg = (error as { message?: string }).message
+      submitError.value = msg ? String(msg) : "Sign up failed"
+      return
+    }
+  } else {
+    const { error } = await auth.client.signIn.email({
+      email: email.value,
+      password: password.value,
+      callbackURL: "/",
+    })
+    if (error) {
+      const msg = (error as { message?: string }).message
+      submitError.value = msg ? String(msg) : "Sign in failed"
+      return
+    }
   }
 }
 
@@ -55,7 +52,7 @@ const activeButtonClass = "bg-gray-700 text-white"
 const inactiveButtonClass = "text-gray-400 hover:text-gray-200"
 
 const error = computed(
-  () => submitError.value ?? authError.value?.message ?? null
+  () => submitError.value ?? auth.error.value?.message ?? null
 )
 
 function FormModeButton({
@@ -81,11 +78,21 @@ function FormModeButton({
   )
 }
 
+const formStyles = computed<StyleObject>(() => {
+  return {
+    opacity: isSubmitting.value ? 0.5 : 1,
+    transition: "0.2s ease-in-out",
+  }
+})
+
 export function AuthModal() {
   const [mode, setMode] = useState<FormMode>("signin")
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      style={formStyles}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    >
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         aria-hidden
@@ -126,6 +133,7 @@ export function AuthModal() {
                 className="w-full rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-gray-100 placeholder-gray-500 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
                 placeholder="Display Name"
                 required
+                disabled={isSubmitting}
               />
             </div>
           )}
@@ -144,6 +152,7 @@ export function AuthModal() {
               bind:value={email}
               className="w-full rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-gray-100 placeholder-gray-500 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
               placeholder="you@example.com"
+              disabled={isSubmitting}
             />
           </div>
           <div>
@@ -164,6 +173,7 @@ export function AuthModal() {
               bind:value={password}
               className="w-full rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-gray-100 placeholder-gray-500 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
               placeholder={mode === "signup" ? "Min 8 characters" : "••••••••"}
+              disabled={isSubmitting}
             />
           </div>
 
