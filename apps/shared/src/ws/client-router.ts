@@ -1,36 +1,34 @@
 import type { Contract } from "./contract.js";
 import type { Transport } from "./transport.js";
 
-type Requests<C extends Contract<any, any>> = C["clientToServer"]["request"];
+type RpcKeysWithPayload<C extends Contract<any>> = {
+  [K in keyof C["rpc"]]: "req" extends keyof C["rpc"][K] ? K : never;
+}[keyof C["rpc"]];
 
-// Constrain each request to { req: any; res: any }
-type KeysWithPayload<R extends Record<string, { req: any; res: any }>> = {
-  [K in keyof R]: R[K]["req"] extends void ? never : K;
-}[keyof R];
+type RpcKeysWithoutPayload<C extends Contract<any>> = {
+  [K in keyof C["rpc"]]: "req" extends keyof C["rpc"][K] ? never : K;
+}[keyof C["rpc"]];
 
-type KeysWithoutPayload<R extends Record<string, { req: any; res: any }>> = {
-  [K in keyof R]: R[K]["req"] extends void ? K : never;
-}[keyof R];
-
-export interface ClientRouter<C extends Contract<any, any>> {
-  send<K extends KeysWithoutPayload<Requests<C>>>(
-    type: K
-  ): Promise<Requests<C>[K]["res"]>;
-  send<K extends KeysWithPayload<Requests<C>>>(
+export interface ClientRouter<C extends Contract<any>> {
+  send<K extends RpcKeysWithoutPayload<C>>(
     type: K,
-    payload: Requests<C>[K]["req"]
-  ): Promise<Requests<C>[K]["res"]>;
+  ): Promise<C["rpc"][K]["res"]>;
 
-  on<K extends keyof C["serverToClient"]["events"]>(
+  send<K extends RpcKeysWithPayload<C>>(
     type: K,
-    handler: (payload: C["serverToClient"]["events"][K]) => void
+    payload: C["rpc"][K]["req"],
+  ): Promise<C["rpc"][K]["res"]>;
+
+  on<K extends keyof C["serverEvents"]>(
+    type: K,
+    handler: (payload: C["serverEvents"][K]) => void,
   ): () => void;
 
   dispose: () => void;
 }
 
-export function createClientRouter<C extends Contract<any, any>>(
-  transport: Transport
+export function createClientRouter<C extends Contract<any>>(
+  transport: Transport,
 ): ClientRouter<C> {
   const pending = new Map<string, (value: any) => void>();
   const listeners = new Map<string, Set<(payload: any) => void>>();
@@ -47,10 +45,7 @@ export function createClientRouter<C extends Contract<any, any>>(
   });
 
   return {
-    send<K extends keyof C["clientToServer"]["request"]>(
-      type: K,
-      payload?: C["clientToServer"]["request"][K]["req"]
-    ) {
+    send<K extends keyof C["rpc"]>(type: K, payload?: C["rpc"][K]["req"]) {
       const id = crypto.randomUUID();
 
       transport.send({
@@ -65,9 +60,9 @@ export function createClientRouter<C extends Contract<any, any>>(
       });
     },
 
-    on<K extends keyof C["serverToClient"]["events"]>(
+    on<K extends keyof C["serverEvents"]>(
       type: K,
-      handler: (payload: C["serverToClient"]["events"][K]) => void
+      handler: (payload: C["serverEvents"][K]) => void,
     ) {
       const key = type as string;
       if (!listeners.has(key)) listeners.set(key, new Set());

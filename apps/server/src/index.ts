@@ -30,7 +30,7 @@ app.route({
     try {
       const url = new URL(
         request.url,
-        `http://${request.headers.host ?? "localhost"}`
+        `http://${request.headers.host ?? "localhost"}`,
       );
       const headers = new Headers();
       for (const [key, value] of Object.entries(request.headers)) {
@@ -65,7 +65,7 @@ const createWsTransport = (socket: WebSocket): Transport => ({
   send: (message) => socket.send(JSON.stringify(message)),
   onMessage: (cb) => {
     const handler: (this: WebSocket, ...args: any[]) => void = (
-      raw: Buffer
+      raw: Buffer,
     ) => {
       const msg = JSON.parse(raw.toString()) as WireMessage;
       cb(msg);
@@ -81,12 +81,14 @@ app.get("/ws", { websocket: true }, (socket, req) => {
   const router = createServerRouter<WebSocketContract>(
     createWsTransport(socket),
     {
-      ping: () => "pong",
+      ping: () => {
+        return "pong";
+      },
       "match:join": ({ id }) => {
         app.log.info({ id }, "Client joined match");
         return { success: false };
       },
-    }
+    },
   );
 
   socket.on("close", () => {
