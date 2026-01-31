@@ -6,7 +6,13 @@ import type { GameLobby, LobbyVisibility } from "./game/lobby.js";
 export type FriendStatus =
   | { kind: "offline" }
   | { kind: "menu" }
-  | { kind: "lobby"; lobbyId: string; playerCount: number; maxPlayers: number; isOpen: boolean }
+  | {
+      kind: "lobby";
+      lobbyId: string;
+      playerCount: number;
+      maxPlayers: number;
+      isOpen: boolean;
+    }
   | { kind: "in_game" };
 
 export type WebSocketContract = Contract<{
@@ -43,6 +49,13 @@ export type WebSocketContract = Contract<{
     "game:turn": { game: GameInstance; previousPlayerId: string };
     "game:ended": GameInstance;
     "game:updated": GameInstance;
+    /** Disconnected player reconnected; update overlay. */
+    "game:playerReconnected": { gameId: string; playerId: string };
+    /** List of players we're waiting to reconnect (empty = none). */
+    "game:waitingForReconnect": {
+      gameId: string;
+      disconnected: { playerId: string; playerName: string }[];
+    };
   };
   rpc: {
     "session:state": {

@@ -22,7 +22,9 @@ import {
   broadcastToUsers,
   emitToUser,
   getUserLobby,
+  getUserGame,
   getFriendStatus,
+  gameDisconnectedPlayers,
 } from "./game/store.js";
 import { GAME_LOBBY_LIMITS } from "./game/config.js";
 import { db } from "./db/index.js";
@@ -183,6 +185,31 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
     app.log.info({ lobbyId: lobby.id, userId }, "Player reconnected to lobby");
   }
 
+  // On connect: if user was in a game and in "disconnected" map, remove and notify
+  const userGame = getUserGame(userId);
+  if (userGame) {
+    const disconnectedMap = gameDisconnectedPlayers.get(userGame.id);
+    if (disconnectedMap?.has(userId)) {
+      disconnectedMap.delete(userId);
+      if (disconnectedMap.size === 0)
+        gameDisconnectedPlayers.delete(userGame.id);
+      broadcastToUsers(userGame.playerOrder, "game:playerReconnected", {
+        gameId: userGame.id,
+        playerId: userId,
+      });
+      const disconnected = disconnectedMap.size
+        ? [...disconnectedMap.entries()].map(([playerId, playerName]) => ({
+            playerId,
+            playerName,
+          }))
+        : [];
+      broadcastToUsers(userGame.playerOrder, "game:waitingForReconnect", {
+        gameId: userGame.id,
+        disconnected,
+      });
+    }
+  }
+
   socket.on("close", async () => {
     const disconnectingUserId = session.user.id;
     app.log.info(
@@ -234,6 +261,28 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
           "lobby:updated",
           lobby,
         );
+      }
+
+      // Game: player disconnected -> enter paused state (overlay)
+      const disconnectingUserGame = getUserGame(disconnectingUserId);
+      if (disconnectingUserGame) {
+        const playerName = session.user.name ?? "Player";
+        let map = gameDisconnectedPlayers.get(disconnectingUserGame.id);
+        if (!map) {
+          map = new Map();
+          gameDisconnectedPlayers.set(disconnectingUserGame.id, map);
+        }
+        map.set(disconnectingUserId, playerName);
+        const game = games.get(disconnectingUserGame.id)!;
+        const disconnected = [...map.entries()].map(([playerId, pName]) => ({
+          playerId,
+          playerName: pName,
+        }));
+        broadcastToUsers(game.playerOrder, "game:waitingForReconnect", {
+          gameId: disconnectingUserGame.id,
+          disconnected,
+        });
+        emitFriendStatusToFriends(disconnectingUserId);
       }
     }
 

@@ -1,8 +1,42 @@
-import type { ServerHandlers, WebSocketContract } from "shared";
+import type { GameInstance, ServerHandlers, WebSocketContract } from "shared";
 import type { WsContext } from "../context.js";
+import { GAME_LOBBY_LIMITS } from "../../game/config.js";
 
 export function createGameHandlers(ctx: WsContext) {
   const { userId, session, games, broadcastToUsers } = ctx;
+
+  function removePlayerFromGame(
+    game: GameInstance,
+    targetPlayerIdx: number,
+    targetPlayerId: string,
+  ): void {
+    game.playerOrder = game.playerOrder.filter((id) => id !== targetPlayerId);
+    if (game.playerOrder.length === 0) {
+      games.delete(game.id);
+      void ctx.emitFriendStatusToFriends(targetPlayerId);
+      return;
+    }
+    if (targetPlayerIdx < game.currentTurnIndex) {
+      game.currentTurnIndex = Math.max(0, game.currentTurnIndex - 1);
+    }
+    if (game.currentTurnIndex >= game.playerOrder.length) {
+      game.currentTurnIndex = 0;
+    }
+    const remainingCount = game.playerOrder.length;
+    const requiredPlayers = GAME_LOBBY_LIMITS.requiredPlayers;
+    if (remainingCount < requiredPlayers) {
+      const order = game.playerOrder;
+      games.delete(game.id);
+      broadcastToUsers(order, "game:ended", { ...game, status: "finished" });
+      for (const pid of order) {
+        void ctx.emitFriendStatusToFriends(pid);
+      }
+      void ctx.emitFriendStatusToFriends(targetPlayerId);
+      return;
+    }
+    broadcastToUsers(game.playerOrder, "game:updated", { ...game });
+    void ctx.emitFriendStatusToFriends(targetPlayerId);
+  }
 
   return {
     "game:turn": ({ gameId }) => {
@@ -30,27 +64,11 @@ export function createGameHandlers(ctx: WsContext) {
     },
     "game:leave": ({ gameId }) => {
       const game = games.get(gameId);
-      if (!game) return { success: false };
+      if (!game) return { success: true };
       const idx = game.playerOrder.indexOf(userId);
-      if (idx === -1) return { success: false };
+      if (idx === -1) return { success: true };
 
-      game.playerOrder = game.playerOrder.filter((id) => id !== userId);
-      if (game.playerOrder.length === 0) {
-        games.delete(gameId);
-        void ctx.emitFriendStatusToFriends(userId);
-        return { success: true };
-      }
-      if (idx < game.currentTurnIndex) {
-        game.currentTurnIndex = Math.max(
-          0,
-          game.currentTurnIndex - 1,
-        );
-      }
-      if (game.currentTurnIndex >= game.playerOrder.length) {
-        game.currentTurnIndex = 0;
-      }
-      broadcastToUsers(game.playerOrder, "game:updated", { ...game });
-      void ctx.emitFriendStatusToFriends(userId);
+      removePlayerFromGame(game, idx, userId);
       return { success: true };
     },
   } satisfies Partial<ServerHandlers<WebSocketContract>>;

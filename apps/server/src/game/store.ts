@@ -28,6 +28,39 @@ export function getUserLobby(userId: string): GameLobby | null {
   );
 }
 
+export function getUserGame(userId: string): GameInstance | null {
+  return (
+    [...games.values()].find((g) => g.playerOrder.includes(userId)) ?? null
+  );
+}
+
+/** Players who disconnected; remaining players see overlay until they reconnect or "Continue without them". */
+export const gameDisconnectedPlayers = new Map<string, Map<string, string>>();
+
+/** Remove a player from their game (used on disconnect when not promptToContinue). Returns true if game was updated or deleted. */
+export function removePlayerFromGameByUserId(
+  userId: string,
+): { gameId: string; game: GameInstance } | null {
+  const game = getUserGame(userId);
+  if (!game) return null;
+  const gameId = game.id;
+  const idx = game.playerOrder.indexOf(userId);
+  if (idx === -1) return null;
+
+  game.playerOrder = game.playerOrder.filter((id) => id !== userId);
+  if (game.playerOrder.length === 0) {
+    games.delete(gameId);
+    return { gameId, game };
+  }
+  if (idx < game.currentTurnIndex) {
+    game.currentTurnIndex = Math.max(0, game.currentTurnIndex - 1);
+  }
+  if (game.currentTurnIndex >= game.playerOrder.length) {
+    game.currentTurnIndex = 0;
+  }
+  return { gameId, game };
+}
+
 export function getFriendStatus(userId: string): FriendStatus {
   if (!hasConnections(userId)) return { kind: "offline" };
   const userGame = [...games.values()].find((g) =>

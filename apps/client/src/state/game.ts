@@ -27,6 +27,12 @@ const lobbyChatMessages = signal<
 const lobbyInvites = signal<
   { lobbyId: string; inviterId: string; inviterName: string }[]
 >([])
+/** Players we're waiting to reconnect (empty list = hide overlay). */
+const waitingForReconnect = signal<{
+  gameId: string
+  disconnected: { playerId: string; playerName: string }[]
+} | null>(null)
+
 /** True only after router is bound and initial session:state has been applied. */
 const ready = signal(false)
 
@@ -46,6 +52,7 @@ export function bindRouter(router: ClientRouter<WebSocketContract> | null) {
     friendRequests.value = []
     pendingSentAddresseeIds.value = []
     lobbyChatMessages.value = new Map()
+    waitingForReconnect.value = null
     return
   }
 
@@ -67,9 +74,17 @@ export function bindRouter(router: ClientRouter<WebSocketContract> | null) {
     }),
     router.on("game:ended", (payload) => {
       gameInstance.value = payload
+      if (waitingForReconnect.value?.gameId === payload.id)
+        waitingForReconnect.value = null
     }),
     router.on("game:updated", (payload) => {
       gameInstance.value = payload
+      if (waitingForReconnect.value?.gameId === payload.id)
+        waitingForReconnect.value = null
+    }),
+    router.on("game:waitingForReconnect", (payload) => {
+      waitingForReconnect.value =
+        payload.disconnected.length > 0 ? payload : null
     }),
     router.on("friend_request:received", (payload) => {
       friendRequests.value = [
@@ -142,8 +157,7 @@ export function bindRouter(router: ClientRouter<WebSocketContract> | null) {
       ]
       toast({
         type: "info",
-        children: () =>
-          `${payload.inviterName} invited you to their lobby`,
+        children: () => `${payload.inviterName} invited you to their lobby`,
       })
     }),
   ]
@@ -218,6 +232,9 @@ export const game = {
   },
   get $lobbyInvites() {
     return lobbyInvites.value
+  },
+  get $waitingForReconnect() {
+    return waitingForReconnect.value
   },
   bindRouter,
   clearError() {
@@ -399,8 +416,10 @@ export const game = {
     }
     try {
       const res = await currentRouter.send("game:leave", { gameId })
-      if (res.success) gameInstance.value = null
-      else error.value = "Could not leave game"
+      if (res.success) {
+        gameInstance.value = null
+        waitingForReconnect.value = null
+      } else error.value = "Could not leave game"
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed to leave"
     }

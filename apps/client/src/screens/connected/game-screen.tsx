@@ -10,9 +10,40 @@ export default function GameScreen({ gameInstance, userId }: Props) {
   const currentPlayerId =
     gameInstance.playerOrder[gameInstance.currentTurnIndex]
   const isMyTurn = currentPlayerId === userId
+  const waiting = game.$waitingForReconnect
+  const showWaitingOverlay =
+    waiting &&
+    waiting.gameId === gameInstance.id &&
+    waiting.disconnected.length > 0
 
   return (
-    <div className="game-panel p-5 flex flex-col gap-5">
+    <div className="game-panel p-5 flex flex-col gap-5 relative">
+      {showWaitingOverlay && (
+        <div
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded bg-(--game-bg)/95 p-6"
+          aria-modal
+          role="dialog"
+          aria-label="Waiting for players to reconnect"
+        >
+          <p className="game-title text-sm uppercase tracking-wider text-(--game-text-dim)">
+            Waiting for players to reconnect:
+          </p>
+          <ul className="flex flex-col gap-1.5 text-(--game-text)">
+            {waiting.disconnected.map((p) => (
+              <li key={p.playerId}>• {p.playerName}</li>
+            ))}
+          </ul>
+          <div className="flex gap-2 flex-wrap justify-center mt-2">
+            <button
+              type="button"
+              onclick={game.leaveGame}
+              className="btn-ghost border-2 border-(--game-danger)/50 text-(--game-danger)"
+            >
+              Leave game
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h2 className="game-title text-lg tracking-wide text-(--game-text)">
           Game {gameInstance.status === "finished" ? "— Over" : ""}
@@ -22,7 +53,7 @@ export default function GameScreen({ gameInstance, userId }: Props) {
           onclick={game.leaveGame}
           className="btn-ghost text-sm"
         >
-          Leave
+          {gameInstance.status === "finished" ? "Leave" : "Leave game"}
         </button>
       </div>
 

@@ -1,9 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import type {
-  GameLobby,
-  ServerHandlers,
-  WebSocketContract,
-} from "shared";
+import type { GameInstance, ServerHandlers, WebSocketContract } from "shared";
 import { getUserLobby, lobbyInvites } from "../../game/store.js";
 import type { WsContext } from "../context.js";
 
@@ -290,12 +286,12 @@ export function createLobbyHandlers(ctx: WsContext) {
       );
       if (!allConnectedReady) return { success: false };
       const gameId = crypto.randomUUID();
-      const game = {
+      const game: GameInstance = {
         id: gameId,
         lobbyId,
         playerOrder: lobby.players.map((p) => p.id),
         currentTurnIndex: 0,
-        status: "playing" as const,
+        status: "playing",
       };
       ctx.games.set(gameId, game);
       lobbies.delete(lobbyId);

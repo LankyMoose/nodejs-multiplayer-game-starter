@@ -1,4 +1,4 @@
-import type { GameInstance, GameLobby, Player } from "shared";
+import type { FriendStatus, GameInstance, GameLobby, Player } from "shared";
 import type { db } from "../db/index.js";
 import type { user, userFriend, friendRequest } from "../db/schema.js";
 import type {
@@ -20,7 +20,7 @@ export type WsContext = {
   broadcastToUsers: typeof broadcastToUsers;
   emitToUser: typeof emitToUser;
   hasConnections: typeof hasConnections;
-  getFriendStatus: (userId: string) => import("shared").FriendStatus;
+  getFriendStatus: (userId: string) => FriendStatus;
   emitFriendStatusToFriends: (userId: string) => Promise<void>;
   db: typeof db;
   schema: {
