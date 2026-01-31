@@ -25,8 +25,6 @@ export type WebSocketContract = Contract<{
     "game:ended": GameInstance;
   };
   rpc: {
-    ping: { res: "pong" };
-    "match:join": { req: { id: string }; res: { success: boolean } };
     "session:state": {
       res: { lobby: GameLobby | null; game: GameInstance | null };
     };
