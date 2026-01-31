@@ -13,6 +13,14 @@ export const lobbyInvites = new Map<
   string,
   { lobbyId: string; inviterId: string }
 >();
+
+const MAX_LOBBY_CHAT = 100;
+/** Lobby chat history: lobbyId -> messages (newest at end). */
+const lobbyChatMessages = new Map<
+  string,
+  Array<{ userId: string; userName: string; text: string }>
+>();
+
 const userConnections = new Map<
   string,
   Array<{
@@ -28,6 +36,26 @@ export function getUserLobby(userId: string): GameLobby | null {
   );
 }
 
+export function getLobbyChat(
+  lobbyId: string
+): Array<{ userId: string; userName: string; text: string }> {
+  return lobbyChatMessages.get(lobbyId) ?? [];
+}
+
+export function appendLobbyChat(
+  lobbyId: string,
+  msg: { userId: string; userName: string; text: string }
+): void {
+  const list = lobbyChatMessages.get(lobbyId) ?? [];
+  list.push(msg);
+  if (list.length > MAX_LOBBY_CHAT) list.shift();
+  lobbyChatMessages.set(lobbyId, list);
+}
+
+export function clearLobbyChat(lobbyId: string): void {
+  lobbyChatMessages.delete(lobbyId);
+}
+
 export function getUserGame(userId: string): GameInstance | null {
   return (
     [...games.values()].find((g) => g.playerOrder.includes(userId)) ?? null
@@ -39,7 +67,7 @@ export const gameDisconnectedPlayers = new Map<string, Map<string, string>>();
 
 /** Remove a player from their game (used on disconnect when not promptToContinue). Returns true if game was updated or deleted. */
 export function removePlayerFromGameByUserId(
-  userId: string,
+  userId: string
 ): { gameId: string; game: GameInstance } | null {
   const game = getUserGame(userId);
   if (!game) return null;
@@ -64,13 +92,13 @@ export function removePlayerFromGameByUserId(
 export function getFriendStatus(userId: string): FriendStatus {
   if (!hasConnections(userId)) return { kind: "offline" };
   const userGame = [...games.values()].find((g) =>
-    g.playerOrder.includes(userId),
+    g.playerOrder.includes(userId)
   );
   if (userGame) return { kind: "in_game" };
   const userLobby = getUserLobby(userId);
   if (userLobby) {
     const connected = userLobby.players.filter(
-      (p) => !userLobby.disconnectedPlayerIds.includes(p.id),
+      (p) => !userLobby.disconnectedPlayerIds.includes(p.id)
     );
     return {
       kind: "lobby",
@@ -86,7 +114,7 @@ export function getFriendStatus(userId: string): FriendStatus {
 export function registerUser(
   userId: string,
   router: ServerRouter<WebSocketContract>,
-  session: { user: { id: string; name: string | null } },
+  session: { user: { id: string; name: string | null } }
 ): void {
   const list = userConnections.get(userId) ?? [];
   list.push({ router, session });
@@ -95,7 +123,7 @@ export function registerUser(
 
 export function unregisterUser(
   userId: string,
-  router: ServerRouter<WebSocketContract>,
+  router: ServerRouter<WebSocketContract>
 ): void {
   const list = userConnections.get(userId);
   if (!list) return;
@@ -111,7 +139,7 @@ export function hasConnections(userId: string): boolean {
 export function emitToUser<K extends keyof WebSocketContract["serverEvents"]>(
   userId: string,
   type: K,
-  payload: WebSocketContract["serverEvents"][K],
+  payload: WebSocketContract["serverEvents"][K]
 ): void {
   const list = userConnections.get(userId) ?? [];
   for (const { router } of list) {
@@ -120,11 +148,11 @@ export function emitToUser<K extends keyof WebSocketContract["serverEvents"]>(
 }
 
 export function broadcastToUsers<
-  K extends keyof WebSocketContract["serverEvents"],
+  K extends keyof WebSocketContract["serverEvents"]
 >(
   userIds: string[],
   type: K,
-  payload: WebSocketContract["serverEvents"][K],
+  payload: WebSocketContract["serverEvents"][K]
 ): void {
   for (const id of userIds) {
     emitToUser(id, type, payload);

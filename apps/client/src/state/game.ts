@@ -165,6 +165,11 @@ export function bindRouter(router: ClientRouter<WebSocketContract> | null) {
     if (currentRouter !== router) return
     lobby.value = state.lobby
     gameInstance.value = state.game
+    if (state.lobby && state.lobbyChatMessages.length > 0) {
+      const next = new Map(lobbyChatMessages.value)
+      next.set(state.lobby.id, state.lobbyChatMessages)
+      lobbyChatMessages.value = next
+    }
     if (state.lobby) {
       toast({
         type: "info",
@@ -270,7 +275,14 @@ export const game = {
       const res = await currentRouter.send("lobby:join", { lobbyId })
       if (!res.success) error.value = "Could not join lobby"
       else {
-        if (res.lobby) lobby.value = res.lobby
+        if (res.lobby) {
+          lobby.value = res.lobby
+          if (res.chat.length > 0) {
+            const next = new Map(lobbyChatMessages.value)
+            next.set(res.lobby.id, res.chat)
+            lobbyChatMessages.value = next
+          }
+        }
         const list = await currentRouter.send("friends:list")
         friends.value = list.friends
       }
@@ -376,7 +388,14 @@ export const game = {
       const res = await currentRouter.send("lobby:acceptInvite", { lobbyId })
       if (!res.success) error.value = "Could not join lobby"
       else {
-        if (res.lobby) lobby.value = res.lobby
+        if (res.lobby) {
+          lobby.value = res.lobby
+          if (res.chat.length > 0) {
+            const next = new Map(lobbyChatMessages.value)
+            next.set(res.lobby.id, res.chat)
+            lobbyChatMessages.value = next
+          }
+        }
         lobbyInvites.value = lobbyInvites.value.filter(
           (inv) => inv.lobbyId !== lobbyId
         )

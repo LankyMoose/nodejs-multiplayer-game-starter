@@ -1,5 +1,6 @@
 import type { ServerHandlers, WebSocketContract } from "shared";
 import type { WsContext } from "../context.js";
+import { getLobbyChat } from "../../game/store.js";
 
 export function createSessionHandlers(ctx: WsContext) {
   const { userId, lobbies, games } = ctx;
@@ -14,6 +15,7 @@ export function createSessionHandlers(ctx: WsContext) {
       return {
         lobby: userLobby ?? null,
         game: userGame ?? null,
+        lobbyChatMessages: userLobby ? getLobbyChat(userLobby.id) : [],
       };
     },
   } satisfies Partial<ServerHandlers<WebSocketContract>>;

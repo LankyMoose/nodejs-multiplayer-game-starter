@@ -15,6 +15,16 @@ export type FriendStatus =
     }
   | { kind: "in_game" };
 
+export interface LobbySuccessResult {
+  success: true;
+  lobby: GameLobby;
+  chat: Array<{
+    userId: string;
+    userName: string;
+    text: string;
+  }>;
+}
+
 export type WebSocketContract = Contract<{
   serverEvents: {
     "user:disconnect": string;
@@ -59,14 +69,20 @@ export type WebSocketContract = Contract<{
   };
   rpc: {
     "session:state": {
-      res: { lobby: GameLobby | null; game: GameInstance | null };
+      res: {
+        lobby: GameLobby | null;
+        game: GameInstance | null;
+        lobbyChatMessages: Array<{
+          userId: string;
+          userName: string;
+          text: string;
+        }>;
+      };
     };
     "lobby:create": { res: { lobbyId: string } };
     "lobby:join": {
       req: { lobbyId: string };
-      res:
-        | { success: false; lobby: null }
-        | { success: true; lobby: GameLobby };
+      res: { success: false; lobby: null } | LobbySuccessResult;
     };
     "lobby:leave": { req: { lobbyId: string }; res: { success: boolean } };
     "lobby:ready": { req: { lobbyId: string }; res: { success: boolean } };
@@ -97,9 +113,7 @@ export type WebSocketContract = Contract<{
     };
     "lobby:acceptInvite": {
       req: { lobbyId: string };
-      res:
-        | { success: false; lobby: null }
-        | { success: true; lobby: GameLobby };
+      res: { success: false; lobby: null } | LobbySuccessResult;
     };
     "game:turn": {
       req: { gameId: string };

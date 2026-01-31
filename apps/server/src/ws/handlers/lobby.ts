@@ -1,6 +1,18 @@
 import { and, eq } from "drizzle-orm";
-import type { GameInstance, ServerHandlers, WebSocketContract } from "shared";
-import { getUserLobby, lobbyInvites } from "../../game/store.js";
+import type {
+  GameInstance,
+  GameLobby,
+  LobbySuccessResult,
+  ServerHandlers,
+  WebSocketContract,
+} from "shared";
+import {
+  appendLobbyChat,
+  clearLobbyChat,
+  getLobbyChat,
+  getUserLobby,
+  lobbyInvites,
+} from "../../game/store.js";
 import type { WsContext } from "../context.js";
 
 export function createLobbyHandlers(ctx: WsContext) {
@@ -58,7 +70,7 @@ export function createLobbyHandlers(ctx: WsContext) {
             await emitFriendStatusToFriends(p.id);
           }
         }
-        return { success: true, lobby: playerLobby };
+        return createLobbySuccessResult(playerLobby);
       }
 
       const lobby = lobbies.get(lobbyId);
@@ -82,7 +94,7 @@ export function createLobbyHandlers(ctx: WsContext) {
       for (const p of lobby.players) {
         await emitFriendStatusToFriends(p.id);
       }
-      return { success: true, lobby };
+      return createLobbySuccessResult(lobby);
     },
     "lobby:setVisibility": ({ lobbyId, visibility }) => {
       const lobby = lobbies.get(lobbyId);
@@ -104,15 +116,16 @@ export function createLobbyHandlers(ctx: WsContext) {
         return { success: false };
       const trimmed = String(text).slice(0, 500).trim();
       if (!trimmed) return { success: true };
+      const msg = {
+        userId,
+        userName: session.user.name ?? "Player",
+        text: trimmed,
+      };
+      appendLobbyChat(lobbyId, msg);
       broadcastToUsers(
         lobby.players.map((p) => p.id),
         "lobby:chat",
-        {
-          lobbyId,
-          userId,
-          userName: session.user.name ?? "Player",
-          text: trimmed,
-        },
+        { lobbyId, ...msg },
       );
       return { success: true };
     },
@@ -153,7 +166,7 @@ export function createLobbyHandlers(ctx: WsContext) {
       if (playerLobby) {
         if (playerLobby.id !== lobbyId) return { success: false, lobby: null };
         lobbyInvites.delete(userId);
-        return { success: true, lobby: playerLobby };
+        return createLobbySuccessResult(playerLobby);
       }
       const lobby = lobbies.get(lobbyId);
       if (!lobby) {
@@ -173,7 +186,7 @@ export function createLobbyHandlers(ctx: WsContext) {
       );
       log.info({ lobbyId, userId }, "Player joined lobby via invite");
       void emitFriendStatusToFriends(userId);
-      return { success: true, lobby };
+      return createLobbySuccessResult(lobby);
     },
     "lobby:leave": ({ lobbyId }) => {
       const lobby = lobbies.get(lobbyId);
@@ -188,6 +201,7 @@ export function createLobbyHandlers(ctx: WsContext) {
       );
       if (lobby.players.length === 0) {
         lobbies.delete(lobbyId);
+        clearLobbyChat(lobbyId);
         log.info({ lobbyId }, "Lobby deleted");
       } else {
         if (lobby.ownerId === leavingUserId) {
@@ -265,8 +279,10 @@ export function createLobbyHandlers(ctx: WsContext) {
       lobby.disconnectedPlayerIds = lobby.disconnectedPlayerIds.filter(
         (id) => id !== playerId,
       );
-      if (lobby.players.length === 0) lobbies.delete(lobbyId);
-      else
+      if (lobby.players.length === 0) {
+        lobbies.delete(lobbyId);
+        clearLobbyChat(lobbyId);
+      } else
         broadcastToUsers(
           lobby.players.map((p) => p.id),
           "lobby:updated",
@@ -311,4 +327,12 @@ export function createLobbyHandlers(ctx: WsContext) {
       return { success: true, gameId };
     },
   } satisfies Partial<ServerHandlers<WebSocketContract>>;
+}
+
+function createLobbySuccessResult(lobby: GameLobby): LobbySuccessResult {
+  return {
+    success: true,
+    lobby: lobby,
+    chat: getLobbyChat(lobby.id),
+  };
 }
