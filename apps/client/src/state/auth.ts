@@ -1,4 +1,4 @@
-import { computed, signal } from "kiru"
+import { signal } from "kiru"
 import { createAuthClient } from "better-auth/client"
 import type { Session, User } from "better-auth"
 import { withMinDuration } from "@/utils"
@@ -17,59 +17,44 @@ type GetSessionError = {
   status: number
   statusText: string
 }
-interface AuthState {
-  user: User | null
-  session: Session | null
-  isLoading: boolean
-  error: GetSessionError | null
-}
 
-const _authState = signal<AuthState>({
-  user: null,
-  session: null,
-  isLoading: true,
-  error: null,
-})
-
-const isAuthenticated = computed(
-  () => !!_authState.value.session && !!_authState.value.user
-)
-const isLoading = computed(() => _authState.value.isLoading)
-const error = computed(() => _authState.value.error)
-const user = computed(() => _authState.value.user)
+const user = signal<User | null>(null)
+const session = signal<Session | null>(null)
+const isLoading = signal<boolean>(true)
+const error = signal<GetSessionError | null>(null)
 
 export const auth = {
-  isAuthenticated,
-  isLoading,
-  error,
-  user,
+  get $isLoading() {
+    return isLoading.value
+  },
+  get $error() {
+    return error.value
+  },
+  get $user() {
+    return user.value
+  },
   update: updateAuthState,
   signOut: () =>
     authClient.signOut().finally(() => (window.location.href = "/")),
   client: authClient,
-  _internal: _authState,
+  _signals: { user, session, isLoading, error },
 }
 
 async function updateAuthState() {
-  _authState.value = { ..._authState.value, isLoading: true }
-  const { error, data } = await withMinDuration(500, () =>
+  isLoading.value = true
+  const { error: authError, data: authData } = await withMinDuration(500, () =>
     authClient.getSession()
   )
 
-  const nextState: AuthState = {
-    user: null,
-    session: null,
-    isLoading: false,
-    error: null,
+  if (authError) {
+    error.value = authError
+    user.value = null
+    session.value = null
+  } else if (authData) {
+    user.value = authData.user
+    session.value = authData.session
+    error.value = null
   }
 
-  if (error) {
-    nextState.error = error
-  } else if (data) {
-    const { user, session } = data
-    nextState.user = user
-    nextState.session = session
-  }
-
-  _authState.value = nextState
+  isLoading.value = false
 }

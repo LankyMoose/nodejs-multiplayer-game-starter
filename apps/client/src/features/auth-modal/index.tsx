@@ -46,9 +46,7 @@ async function handleSubmit(e: Event, mode: FormMode) {
   }
 }
 
-const error = computed(
-  () => submitError.value ?? auth.error.value?.message ?? null
-)
+const error = computed(() => submitError.value ?? auth.$error?.message ?? null)
 
 function FormModeButton({
   active,
@@ -189,8 +187,8 @@ export function AuthModal() {
             {isSubmitting.value
               ? "Please wait…"
               : mode === "signin"
-                ? "Sign in"
-                : "Create account"}
+              ? "Sign in"
+              : "Create account"}
           </button>
         </form>
       </div>
