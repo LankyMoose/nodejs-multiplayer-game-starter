@@ -67,7 +67,6 @@ export function bindRouter(router: ClientRouter<WebSocketContract> | null) {
     }),
     router.on("game:started", (payload) => {
       gameInstance.value = payload
-      lobby.value = null
     }),
     router.on("game:turn", (payload) => {
       gameInstance.value = payload.game

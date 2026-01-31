@@ -3,7 +3,18 @@ import type { WsContext } from "../context.js";
 import { GAME_LOBBY_LIMITS } from "../../game/config.js";
 
 export function createGameHandlers(ctx: WsContext) {
-  const { userId, session, games, broadcastToUsers } = ctx;
+  const { userId, session, games, lobbies, broadcastToUsers } = ctx;
+
+  function returnLobbyFromGame(game: GameInstance): void {
+    const lobby = lobbies.get(game.lobbyId);
+    if (!lobby) return;
+    delete lobby.inGameId;
+    lobby.readyPlayers = [];
+    broadcastToUsers(game.playerOrder, "lobby:updated", lobby);
+    for (const pid of game.playerOrder) {
+      void ctx.emitFriendStatusToFriends(pid);
+    }
+  }
 
   function removePlayerFromGame(
     game: GameInstance,
@@ -28,8 +39,8 @@ export function createGameHandlers(ctx: WsContext) {
       const order = game.playerOrder;
       games.delete(game.id);
       broadcastToUsers(order, "game:ended", { ...game, status: "finished" });
-      for (const pid of order) {
-        void ctx.emitFriendStatusToFriends(pid);
+      if (game.status === "playing") {
+        returnLobbyFromGame({ ...game, playerOrder: order });
       }
       void ctx.emitFriendStatusToFriends(targetPlayerId);
       return;
@@ -56,9 +67,7 @@ export function createGameHandlers(ctx: WsContext) {
       });
       if (finished) {
         broadcastToUsers(game.playerOrder, "game:ended", game);
-        for (const pid of game.playerOrder) {
-          void ctx.emitFriendStatusToFriends(pid);
-        }
+        returnLobbyFromGame(game);
       }
       return { success: true };
     },

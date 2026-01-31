@@ -65,6 +65,9 @@ export function createLobbyHandlers(ctx: WsContext) {
       if (!lobby) {
         return { success: false, lobby: null };
       }
+      if (lobby.inGameId) {
+        return { success: false, lobby: null };
+      }
       if (lobby.players.length >= lobby.maxPlayers) {
         return { success: false, lobby: null };
       }
@@ -299,7 +302,7 @@ export function createLobbyHandlers(ctx: WsContext) {
         status: "playing",
       };
       ctx.games.set(gameId, game);
-      lobbies.delete(lobbyId);
+      lobby.inGameId = gameId;
       broadcastToUsers(game.playerOrder, "game:started", game);
       for (const pid of game.playerOrder) {
         void ctx.emitFriendStatusToFriends(pid);

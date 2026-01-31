@@ -53,7 +53,7 @@ export default function GameScreen({ gameInstance, userId }: Props) {
           onclick={game.leaveGame}
           className="btn-ghost text-sm"
         >
-          {gameInstance.status === "finished" ? "Leave" : "Leave game"}
+          {gameInstance.status === "finished" ? "Back to lobby" : "Leave game"}
         </button>
       </div>
 

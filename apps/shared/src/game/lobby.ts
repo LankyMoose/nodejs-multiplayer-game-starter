@@ -15,4 +15,6 @@ export interface GameLobby {
   disconnectedPlayerIds: Player["id"][];
   /** Whether friends can join without an invite. Default private. */
   visibility: LobbyVisibility;
+  /** Set while a game is in progress; cleared when the game ends so players return to this lobby. */
+  inGameId?: string;
 }
