@@ -1,10 +1,14 @@
+import { signal } from "kiru"
 import type { GameInstance } from "shared"
 import { game } from "@/state/game"
+import LobbyChat from "@/features/lobby/lobby-chat"
 
 type Props = {
   gameInstance: GameInstance
   userId: string
 }
+
+const gameChatInput = signal("")
 
 export default function GameScreen({ gameInstance, userId }: Props) {
   const currentPlayerId =
@@ -15,9 +19,11 @@ export default function GameScreen({ gameInstance, userId }: Props) {
     waiting &&
     waiting.gameId === gameInstance.id &&
     waiting.disconnected.length > 0
+  const showLobbyChat =
+    game.$lobby?.id === gameInstance.lobbyId
 
   return (
-    <div className="game-panel p-5 flex flex-col gap-5 relative">
+    <div className="game-panel p-5 flex flex-col gap-5 relative min-h-0 flex-1">
       {showWaitingOverlay && (
         <div
           className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded bg-(--game-bg)/95 p-6"
@@ -86,6 +92,23 @@ export default function GameScreen({ gameInstance, userId }: Props) {
         </div>
       ) : (
         <p className="text-sm text-(--game-text-dim)">Game finished.</p>
+      )}
+
+      {showLobbyChat && (
+        <div className="flex flex-col gap-2 min-h-0 shrink mt-2 border-t border-(--game-surface-border) pt-4">
+          <LobbyChat
+            lobbyId={gameInstance.lobbyId}
+            messages={game.$lobbyChatMessages.get(gameInstance.lobbyId) ?? []}
+            chatInput={gameChatInput}
+            onSend={() => {
+              const t = gameChatInput.value.trim()
+              if (t) {
+                game.sendLobbyChat(gameInstance.lobbyId, t)
+                gameChatInput.value = ""
+              }
+            }}
+          />
+        </div>
       )}
     </div>
   )
