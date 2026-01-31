@@ -1,3 +1,4 @@
+import { CrownIcon } from "@/components/icons/crown"
 import { game } from "@/state/game"
 import { GameLobby } from "shared"
 
@@ -13,7 +14,9 @@ export function LobbyViewScreen({
   pendingSentAddresseeIds: string[]
 }) {
   const disconnected = lobby.disconnectedPlayerIds ?? []
-  const connectedPlayers = lobby.players.filter((p) => !disconnected.includes(p.id))
+  const connectedPlayers = lobby.players.filter(
+    (p) => !disconnected.includes(p.id)
+  )
   const isReady = lobby.readyPlayers.includes(userId)
   const allReady =
     connectedPlayers.length >= lobby.requiredPlayers &&
@@ -36,16 +39,15 @@ export function LobbyViewScreen({
       </p>
       <ul className="flex flex-col gap-1">
         {lobby.players.map((p) => (
-          <li
-            key={p.id}
-            className="text-sm flex items-center gap-2 flex-wrap"
-          >
+          <li key={p.id} className="text-sm flex items-center gap-2 flex-wrap">
             <span className={p.id === userId ? "text-purple-300" : ""}>
               {p.name}
               {p.id === userId ? " (you)" : ""}
             </span>
             {lobby.ownerId === p.id && (
-              <span className="text-amber-400 text-xs">owner</span>
+              <span title="Lobby Owner">
+                <CrownIcon className="w-4 h-4 text-amber-400" />
+              </span>
             )}
             {disconnected.includes(p.id) && (
               <span className="text-gray-500 text-xs">disconnected</span>
@@ -71,20 +73,22 @@ export function LobbyViewScreen({
                 </button>
               </>
             )}
-            {p.id !== userId && !friendIds.includes(p.id) &&
+            {p.id !== userId &&
+              !friendIds.includes(p.id) &&
               pendingSentAddresseeIds.includes(p.id) && (
-              <span className="text-gray-500 text-xs">pending</span>
-            )}
-            {p.id !== userId && !friendIds.includes(p.id) &&
+                <span className="text-gray-500 text-xs">pending</span>
+              )}
+            {p.id !== userId &&
+              !friendIds.includes(p.id) &&
               !pendingSentAddresseeIds.includes(p.id) && (
-              <button
-                type="button"
-                onclick={() => game.addFriend(p.id)}
-                className="text-xs text-blue-400 hover:text-blue-300 underline"
-              >
-                Add friend
-              </button>
-            )}
+                <button
+                  type="button"
+                  onclick={() => game.addFriend(p.id)}
+                  className="text-xs text-blue-400 hover:text-blue-300 underline"
+                >
+                  Add friend
+                </button>
+              )}
           </li>
         ))}
       </ul>

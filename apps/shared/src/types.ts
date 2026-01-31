@@ -15,6 +15,7 @@ export type WebSocketContract = Contract<{
     "friend_request:accepted": {
       friendId: string;
       friendName: string;
+      online: boolean;
     };
     "friend:removed": { friendId: string };
     "friend:online": { userId: string };

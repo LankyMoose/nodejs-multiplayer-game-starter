@@ -164,6 +164,7 @@ export function createFriendsHandlers(ctx: WsContext) {
       emitToUser(requesterId, "friend_request:accepted", {
         friendId: userId,
         friendName: addresseeName,
+        online: hasConnections(userId),
       });
       return { success: true };
     },

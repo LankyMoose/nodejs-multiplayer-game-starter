@@ -72,7 +72,7 @@ export function bindRouter(router: ClientRouter<WebSocketContract> | null) {
         {
           id: payload.friendId,
           name: payload.friendName,
-          online: false,
+          online: payload.online,
         },
       ]
       pendingSentAddresseeIds.value = pendingSentAddresseeIds.value.filter(
