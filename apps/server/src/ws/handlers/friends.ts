@@ -3,8 +3,16 @@ import type { WsContext } from "../context.js";
 import type { ServerHandlers, WebSocketContract } from "shared";
 
 export function createFriendsHandlers(ctx: WsContext) {
-  const { userId, session, log, lobbies, db, schema, emitToUser, hasConnections } =
-    ctx;
+  const {
+    userId,
+    session,
+    log,
+    lobbies,
+    db,
+    schema,
+    emitToUser,
+    hasConnections,
+  } = ctx;
   const { user, userFriend, friendRequest } = schema;
 
   return {
@@ -22,7 +30,7 @@ export function createFriendsHandlers(ctx: WsContext) {
       return {
         friends: users.map((u) => ({
           id: u.id,
-          name: u.name ?? "Unknown",
+          name: u.name,
           online: hasConnections(u.id),
         })),
       };
@@ -33,19 +41,19 @@ export function createFriendsHandlers(ctx: WsContext) {
         .select()
         .from(userFriend)
         .where(
-          and(eq(userFriend.userId, userId), eq(userFriend.friendId, friendId))
+          and(eq(userFriend.userId, userId), eq(userFriend.friendId, friendId)),
         )
         .limit(1);
       if (!row) return { success: false };
       await db
         .delete(userFriend)
         .where(
-          and(eq(userFriend.userId, userId), eq(userFriend.friendId, friendId))
+          and(eq(userFriend.userId, userId), eq(userFriend.friendId, friendId)),
         );
       await db
         .delete(userFriend)
         .where(
-          and(eq(userFriend.userId, friendId), eq(userFriend.friendId, userId))
+          and(eq(userFriend.userId, friendId), eq(userFriend.friendId, userId)),
         );
       emitToUser(friendId, "friend:removed", { friendId: userId });
       log.info({ userId, friendId }, "Friend removed");
@@ -56,7 +64,7 @@ export function createFriendsHandlers(ctx: WsContext) {
       const inSameLobby = [...lobbies.values()].some(
         (lobby) =>
           lobby.players.some((p) => p.id === userId) &&
-          lobby.players.some((p) => p.id === addresseeId)
+          lobby.players.some((p) => p.id === addresseeId),
       );
       if (!inSameLobby) return { success: false };
       const [alreadyFriends] = await db
@@ -65,8 +73,8 @@ export function createFriendsHandlers(ctx: WsContext) {
         .where(
           and(
             eq(userFriend.userId, userId),
-            eq(userFriend.friendId, addresseeId)
-          )
+            eq(userFriend.friendId, addresseeId),
+          ),
         )
         .limit(1);
       if (alreadyFriends) return { success: false };
@@ -76,8 +84,8 @@ export function createFriendsHandlers(ctx: WsContext) {
         .where(
           and(
             eq(friendRequest.requesterId, userId),
-            eq(friendRequest.addresseeId, addresseeId)
-          )
+            eq(friendRequest.addresseeId, addresseeId),
+          ),
         )
         .limit(1);
       if (existingRequest) return { success: false };
@@ -87,16 +95,15 @@ export function createFriendsHandlers(ctx: WsContext) {
         .where(
           and(
             eq(friendRequest.requesterId, addresseeId),
-            eq(friendRequest.addresseeId, userId)
-          )
+            eq(friendRequest.addresseeId, userId),
+          ),
         )
         .limit(1);
       if (reverseRequest) return { success: false };
-      const now = new Date();
       await db.insert(friendRequest).values({
         requesterId: userId,
         addresseeId,
-        createdAt: now,
+        createdAt: new Date(),
       });
       emitToUser(addresseeId, "friend_request:received", {
         requesterId: userId,
@@ -117,8 +124,8 @@ export function createFriendsHandlers(ctx: WsContext) {
         .where(
           inArray(
             user.id,
-            rows.map((r) => r.requesterId)
-          )
+            rows.map((r) => r.requesterId),
+          ),
         );
       return {
         requests: requesters.map((u) => ({
@@ -141,8 +148,8 @@ export function createFriendsHandlers(ctx: WsContext) {
         .where(
           and(
             eq(friendRequest.requesterId, requesterId),
-            eq(friendRequest.addresseeId, userId)
-          )
+            eq(friendRequest.addresseeId, userId),
+          ),
         )
         .limit(1);
       if (!req) return { success: false };
@@ -151,8 +158,8 @@ export function createFriendsHandlers(ctx: WsContext) {
         .where(
           and(
             eq(friendRequest.requesterId, requesterId),
-            eq(friendRequest.addresseeId, userId)
-          )
+            eq(friendRequest.addresseeId, userId),
+          ),
         );
       const now = new Date();
       await db.insert(userFriend).values([
@@ -174,8 +181,8 @@ export function createFriendsHandlers(ctx: WsContext) {
         .where(
           and(
             eq(friendRequest.requesterId, requesterId),
-            eq(friendRequest.addresseeId, userId)
-          )
+            eq(friendRequest.addresseeId, userId),
+          ),
         );
       return { success: true };
     },
