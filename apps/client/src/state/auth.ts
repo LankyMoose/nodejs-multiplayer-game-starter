@@ -1,8 +1,8 @@
 import { computed, signal } from "kiru"
 import { createAuthClient } from "better-auth/client"
 import type { Session, User } from "better-auth"
-import { withMinDuration } from "../utils"
-import { env } from "../env"
+import { withMinDuration } from "@/utils"
+import { env } from "@/env"
 
 window.__kiru.on("mount", (ctx) => ctx.name === "client" && updateAuthState())
 

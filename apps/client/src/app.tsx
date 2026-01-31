@@ -1,36 +1,29 @@
 import { Transition } from "kiru"
 import { auth } from "@/state/auth"
-import { wsConnectionState } from "@/state/ws"
-import { AuthModal } from "./features/auth-modal"
-
-wsConnectionState.subscribe((state) => {
-  console.log("wsConnectionState", state)
-})
+import { AuthModal } from "@/features/auth-modal"
 
 export default function App() {
   return (
-    <>
-      <Transition
-        in={auth.isLoading.value}
-        duration={{
-          in: 0,
-          out: 150,
-        }}
-        initialState="entered"
-        element={(state) => {
-          if (state === "exited")
-            return auth.isAuthenticated.value ? <Home /> : <AuthModal />
+    <Transition
+      in={auth.isLoading.value}
+      duration={{
+        in: 0,
+        out: 150,
+      }}
+      initialState="entered"
+      element={(state) => {
+        if (state === "exited")
+          return auth.isAuthenticated.value ? <Home /> : <AuthModal />
 
-          const opacity = state === "entered" ? 1 : 0
-          return (
-            <div
-              className="loader"
-              style={{ opacity, transitionDuration: "150ms" }}
-            />
-          )
-        }}
-      />
-    </>
+        const opacity = state === "entered" ? 1 : 0
+        return (
+          <div
+            className="loader"
+            style={{ opacity, transitionDuration: "150ms" }}
+          />
+        )
+      }}
+    />
   )
 }
 

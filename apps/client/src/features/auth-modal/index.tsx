@@ -46,11 +46,6 @@ async function handleSubmit(e: Event, mode: FormMode) {
   }
 }
 
-const modeButtonClassPrefix =
-  "flex-1 rounded-md py-2 text-sm font-medium transition "
-const activeButtonClass = "bg-gray-700 text-white"
-const inactiveButtonClass = "text-gray-400 hover:text-gray-200"
-
 const error = computed(
   () => submitError.value ?? auth.error.value?.message ?? null
 )
@@ -69,8 +64,10 @@ function FormModeButton({
       type="button"
       onclick={onclick}
       className={
-        modeButtonClassPrefix +
-        (active ? activeButtonClass : inactiveButtonClass)
+        "flex-1 rounded-md py-2 text-sm font-medium transition " +
+        (active
+          ? "bg-gray-700 text-white"
+          : "text-gray-400 hover:text-gray-200")
       }
     >
       {children}
@@ -93,10 +90,7 @@ export function AuthModal() {
       style={formStyles}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        aria-hidden
-      />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div className="relative w-full max-w-sm rounded-2xl border border-gray-700/80 bg-gray-900/95 p-6 shadow-xl shadow-purple-950/20">
         <div className="mb-6 flex gap-2 rounded-lg bg-gray-800/80 p-1">
           <FormModeButton
@@ -195,8 +189,8 @@ export function AuthModal() {
             {isSubmitting.value
               ? "Please wait…"
               : mode === "signin"
-              ? "Sign in"
-              : "Create account"}
+                ? "Sign in"
+                : "Create account"}
           </button>
         </form>
       </div>

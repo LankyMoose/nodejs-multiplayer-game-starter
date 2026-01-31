@@ -3,33 +3,36 @@ import {
   WebSocketContract,
   createClientRouter,
 } from "shared"
-import { signal } from "kiru"
+import { Signal, signal, computed } from "kiru"
 import { env } from "@/env"
+import { auth } from "./auth"
+
+export const ws = computed(() => {
+  if (!auth.isAuthenticated.value) return null
+  return createWebSocket()
+})
 
 /** Close code sent by server when the client is not authenticated */
 
-type WsConnectionState =
+type WebSocketState =
   | "idle"
   | "connecting"
   | "connected"
   | "disconnected"
   | "unauthorized"
 
-export const wsConnectionState = signal<WsConnectionState>("connecting")
-
 export function createWebSocket() {
+  const state = signal<WebSocketState>("connecting")
   const socket = new WebSocket(
     `${import.meta.env.DEV ? "ws" : "wss"}://${env.HOST}${env.PORT}/ws`
   )
-  socket.addEventListener("open", () => (wsConnectionState.value = "connected"))
+
+  socket.addEventListener("open", () => (state.value = "connected"))
   socket.addEventListener("close", (event) => {
-    wsConnectionState.value =
+    state.value =
       event.code === WS_CLOSE_UNAUTHORIZED ? "unauthorized" : "disconnected"
   })
-  socket.addEventListener(
-    "error",
-    () => (wsConnectionState.value = "disconnected")
-  )
+  socket.addEventListener("error", () => (state.value = "disconnected"))
 
   const router = createClientRouter<WebSocketContract>({
     send(msg) {
@@ -50,9 +53,11 @@ export function createWebSocket() {
   return {
     socket,
     router,
+    state,
     dispose: () => {
       socket.close()
       router.dispose()
+      Signal.dispose(state)
     },
   }
 }
