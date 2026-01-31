@@ -30,17 +30,25 @@ export interface ClientRouter<C extends Contract<any>> {
 export function createClientRouter<C extends Contract<any>>(
   transport: Transport,
 ): ClientRouter<C> {
-  const pending = new Map<string, (value: any) => void>();
+  const pending = new Map<
+    string,
+    { resolve: (value: any) => void; reject: (reason?: any) => void }
+  >();
   const listeners = new Map<string, Set<(payload: any) => void>>();
 
   const disposeTransport = transport.onMessage((message) => {
-    if (message.kind === "response") {
-      pending.get(message.id)?.(message.payload);
-      pending.delete(message.id);
-    }
-
-    if (message.kind === "event") {
-      listeners.get(message.type)?.forEach((fn) => fn(message.payload));
+    switch (message.kind) {
+      case "response":
+        pending.get(message.id)?.resolve(message.payload);
+        pending.delete(message.id);
+        return;
+      case "event":
+        listeners.get(message.type)?.forEach((fn) => fn(message.payload));
+        return;
+      case "error":
+        pending.get(message.id)?.reject(message.message);
+        pending.delete(message.id);
+        return;
     }
   });
 
@@ -55,8 +63,8 @@ export function createClientRouter<C extends Contract<any>>(
         payload,
       });
 
-      return new Promise((resolve) => {
-        pending.set(id, resolve);
+      return new Promise((resolve, reject) => {
+        pending.set(id, { resolve, reject });
       });
     },
 

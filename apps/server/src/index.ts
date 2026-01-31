@@ -10,6 +10,7 @@ import {
   type WebSocketContract,
   WS_CLOSE_UNAUTHORIZED,
   type Player,
+  type ServerRouterOptions,
 } from "shared";
 import { fastifyRequestToRequest, fastifyHeadersToHeaders } from "./utils.js";
 import {
@@ -20,6 +21,7 @@ import {
   hasConnections,
   broadcastToUsers,
   emitToUser,
+  getUserLobby,
 } from "./game/store.js";
 import { GAME_LOBBY_LIMITS } from "./game/config.js";
 import { db } from "./db/index.js";
@@ -77,6 +79,12 @@ const createWsTransport = (socket: WebSocket): Transport => ({
   },
 });
 
+const wsServerRouterOptions: ServerRouterOptions = {
+  onHandlerError: (err) => app.log.error(err, "Invalid WebSocket message"),
+  onInvalidMessageType: (message) =>
+    app.log.error(message, "Invalid WebSocket message type"),
+};
+
 app.get("/ws", { websocket: true }, async (socket, req) => {
   let session: Awaited<ReturnType<typeof auth.api.getSession>>;
 
@@ -126,6 +134,7 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
   const router = createServerRouter<WebSocketContract>(
     createWsTransport(socket),
     createWsHandlers(wsContext),
+    wsServerRouterOptions,
   );
 
   registerUser(session.user.id, router, session);
@@ -141,10 +150,10 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
 
   // On connect: mark user as back in any lobbies they were disconnected from
   const lobby = [...lobbies.values()].find((l) =>
-    l.disconnectedPlayerIds?.includes(userId),
+    l.disconnectedPlayerIds.includes(userId),
   );
   if (lobby) {
-    lobby.disconnectedPlayerIds = lobby.disconnectedPlayerIds?.filter(
+    lobby.disconnectedPlayerIds = lobby.disconnectedPlayerIds.filter(
       (id) => id !== userId,
     );
     broadcastToUsers(
@@ -164,29 +173,31 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
 
     unregisterUser(disconnectingUserId, router);
 
+    // if this is the last connection for a user:
+    // - notify their friends
+    // - update the lobby if they were in one
     if (!hasConnections(disconnectingUserId)) {
       const friendRows = await db
         .select({ friendId: userFriend.friendId })
         .from(userFriend)
         .where(eq(userFriend.userId, disconnectingUserId));
+
       for (const row of friendRows) {
         emitToUser(row.friendId, "friend:offline", {
           userId: disconnectingUserId,
         });
       }
 
-      for (const lobby of lobbies.values()) {
-        const inLobby = lobby.players.some((p) => p.id === disconnectingUserId);
-        if (!inLobby) continue;
-
-        if (!lobby.disconnectedPlayerIds) lobby.disconnectedPlayerIds = [];
-        if (!lobby.disconnectedPlayerIds.includes(disconnectingUserId)) {
-          lobby.disconnectedPlayerIds.push(disconnectingUserId);
+      const lobby = getUserLobby(disconnectingUserId);
+      if (lobby) {
+        const disconnectedIds = lobby.disconnectedPlayerIds;
+        if (!disconnectedIds.includes(disconnectingUserId)) {
+          disconnectedIds.push(disconnectingUserId);
         }
 
         if (lobby.ownerId === disconnectingUserId) {
           const connected = lobby.players.filter(
-            (p) => !lobby.disconnectedPlayerIds!.includes(p.id),
+            (p) => !disconnectedIds.includes(p.id),
           );
           const newOwner =
             connected[Math.floor(Math.random() * connected.length)];

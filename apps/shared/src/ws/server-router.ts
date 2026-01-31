@@ -17,9 +17,15 @@ export interface ServerRouter<C extends Contract<any>> {
   dispose: () => void;
 }
 
+export interface ServerRouterOptions {
+  onHandlerError?: (error: any) => void;
+  onInvalidMessageType?: (message: any) => void;
+}
+
 export function createServerRouter<C extends Contract<any>>(
   transport: Transport,
   handlers: ServerHandlers<C>,
+  options?: ServerRouterOptions,
 ): ServerRouter<C> {
   const disposeTransport = transport.onMessage(async (message) => {
     if (message.kind !== "request") return;
@@ -27,18 +33,27 @@ export function createServerRouter<C extends Contract<any>>(
     const handler = handlers[message.type];
 
     if (!handler) {
-      // optional: send error response
+      options?.onInvalidMessageType?.(message);
       return;
     }
 
-    const result = await handler(message.payload);
-
-    transport.send({
-      kind: "response",
-      id: message.id,
-      type: message.type,
-      payload: result,
-    });
+    try {
+      const result = await handler(message.payload);
+      transport.send({
+        kind: "response",
+        id: message.id,
+        type: message.type,
+        payload: result,
+      });
+    } catch (error) {
+      options?.onHandlerError?.(error);
+      // no information about the internal error is sent, this is by design.
+      transport.send({
+        kind: "error",
+        id: message.id,
+        message: "Internal error",
+      });
+    }
   });
 
   return {
