@@ -270,7 +270,11 @@ export const game = {
     try {
       const res = await currentRouter.send("lobby:join", { lobbyId })
       if (!res.success) error.value = "Could not join lobby"
-      else if (res.lobby) lobby.value = res.lobby
+      else {
+        if (res.lobby) lobby.value = res.lobby
+        const list = await currentRouter.send("friends:list")
+        friends.value = list.friends
+      }
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed to join lobby"
     }
@@ -377,6 +381,8 @@ export const game = {
         lobbyInvites.value = lobbyInvites.value.filter(
           (inv) => inv.lobbyId !== lobbyId
         )
+        const list = await currentRouter.send("friends:list")
+        friends.value = list.friends
       }
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed to join"

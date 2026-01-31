@@ -37,7 +37,7 @@ export function createLobbyHandlers(ctx: WsContext) {
       void emitFriendStatusToFriends(userId);
       return { lobbyId };
     },
-    "lobby:join": ({ lobbyId }) => {
+    "lobby:join": async ({ lobbyId }) => {
       const playerLobby = getUserLobby(userId);
       if (playerLobby) {
         if (lobbyId !== playerLobby.id) {
@@ -54,6 +54,9 @@ export function createLobbyHandlers(ctx: WsContext) {
             playerLobby,
           );
           log.info({ lobbyId, userId }, "Player rejoined lobby");
+          for (const p of playerLobby.players) {
+            await emitFriendStatusToFriends(p.id);
+          }
         }
         return { success: true, lobby: playerLobby };
       }
@@ -73,7 +76,9 @@ export function createLobbyHandlers(ctx: WsContext) {
         lobby,
       );
       log.info({ lobbyId, userId }, "Player joined lobby");
-      void emitFriendStatusToFriends(userId);
+      for (const p of lobby.players) {
+        await emitFriendStatusToFriends(p.id);
+      }
       return { success: true, lobby };
     },
     "lobby:setVisibility": ({ lobbyId, visibility }) => {
