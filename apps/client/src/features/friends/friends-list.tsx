@@ -36,11 +36,15 @@ export default function FriendsList() {
             f.status.isOpen &&
             f.status.playerCount < f.status.maxPlayers &&
             !inLobby
+          const isAlreadyInvited = (currentLobby?.invitedUsers ?? []).some(
+            (u) => u.id === f.id
+          )
           const canInviteToLobby =
             inLobby &&
             isOwner &&
             currentLobby &&
             !currentLobby.players.some((p) => p.id === f.id) &&
+            !isAlreadyInvited &&
             currentLobby.players.length < currentLobby.maxPlayers &&
             f.status.kind === "menu"
 
@@ -68,16 +72,21 @@ export default function FriendsList() {
                   {friendStatusLabel(f.status)}
                 </span>
               </div>
-              <div className="flex flex-wrap gap-1">
-                {canJoinOpenLobby && (
-                  <button
-                    type="button"
-                    onclick={() => game.joinLobby(f.status.lobbyId)}
-                    className="btn-ghost text-xs text-(--game-success) hover:bg-(--game-success)/15 border border-(--game-success)/50"
-                  >
-                    Join
-                  </button>
-                )}
+              <div className="flex flex-wrap items-center justify-between gap-1">
+                {canJoinOpenLobby &&
+                  f.status.kind === "lobby" &&
+                  (() => {
+                    const lobbyId = f.status.lobbyId
+                    return (
+                      <button
+                        type="button"
+                        onclick={() => game.joinLobby(lobbyId)}
+                        className="btn-ghost text-xs text-(--game-success) hover:bg-(--game-success)/15 border border-(--game-success)/50"
+                      >
+                        Join
+                      </button>
+                    )
+                  })()}
                 {canInviteToLobby && (
                   <button
                     type="button"
@@ -87,8 +96,13 @@ export default function FriendsList() {
                     }
                     className="btn-ghost text-xs text-(--game-accent) hover:bg-(--game-accent)/15"
                   >
-                    Add to lobby
+                    Invite to lobby
                   </button>
+                )}
+                {isAlreadyInvited && (
+                  <span className="text-xs text-(--game-text-dim) italic">
+                    Invited
+                  </span>
                 )}
                 <button
                   type="button"

@@ -42,6 +42,7 @@ export type WebSocketContract = Contract<{
       inviterId: string;
       inviterName: string;
     };
+    "lobby:inviteCancelled": { lobbyId: string };
     "friend_request:received": {
       requesterId: string;
       requesterName: string;
@@ -109,6 +110,10 @@ export type WebSocketContract = Contract<{
     };
     "lobby:inviteFriend": {
       req: { lobbyId: string; friendId: string };
+      res: { success: boolean };
+    };
+    "lobby:cancelInvite": {
+      req: { lobbyId: string; userId: string };
       res: { success: boolean };
     };
     "lobby:acceptInvite": {

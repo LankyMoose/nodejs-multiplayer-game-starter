@@ -1,4 +1,4 @@
-import type { ClientRouter } from "shared"
+import type { ClientRouter, LobbyVisibility } from "shared"
 import type {
   FriendStatus,
   GameInstance,
@@ -159,6 +159,11 @@ export function bindRouter(router: ClientRouter<WebSocketContract> | null) {
         children: () => `${payload.inviterName} invited you to their lobby`,
       })
     }),
+    router.on("lobby:inviteCancelled", (payload) => {
+      lobbyInvites.value = lobbyInvites.value.filter(
+        (inv) => inv.lobbyId !== payload.lobbyId
+      )
+    }),
   ]
 
   void router.send("session:state").then((state) => {
@@ -197,6 +202,22 @@ export function bindRouter(router: ClientRouter<WebSocketContract> | null) {
   unregister = () => {
     cleanups.forEach((cleanup) => cleanup())
     currentRouter = null
+  }
+}
+
+const action = <T, Args extends any[]>(
+  callback: (
+    router: ClientRouter<WebSocketContract>,
+    ...args: Args
+  ) => Promise<T>
+) => {
+  return (...args: Args) => {
+    error.value = null
+    if (!currentRouter) {
+      error.value = "Not connected"
+      return
+    }
+    return callback(currentRouter, ...args)
   }
 }
 
@@ -244,18 +265,12 @@ export const game = {
   clearError() {
     error.value = null
   },
-  async createLobby() {
-    error.value = null
-    if (!currentRouter) {
-      error.value = "Not connected"
-      return
-    }
+  createLobby: action(async (router) => {
     try {
-      const { lobbyId } = await currentRouter.send("lobby:create")
-      const { success, lobby: joinedLobby } = await currentRouter.send(
-        "lobby:join",
-        { lobbyId }
-      )
+      const { lobbyId } = await router.send("lobby:create")
+      const { success, lobby: joinedLobby } = await router.send("lobby:join", {
+        lobbyId,
+      })
       if (!success) {
         error.value = "Could not join lobby"
         return
@@ -264,15 +279,10 @@ export const game = {
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed to create lobby"
     }
-  },
-  async joinLobby(lobbyId: string) {
-    error.value = null
-    if (!currentRouter) {
-      error.value = "Not connected"
-      return
-    }
+  }),
+  joinLobby: action(async (router, lobbyId) => {
     try {
-      const res = await currentRouter.send("lobby:join", { lobbyId })
+      const res = await router.send("lobby:join", { lobbyId })
       if (!res.success) error.value = "Could not join lobby"
       else {
         if (res.lobby) {
@@ -283,18 +293,16 @@ export const game = {
             lobbyChatMessages.value = next
           }
         }
-        const list = await currentRouter.send("friends:list")
+        const list = await router.send("friends:list")
         friends.value = list.friends
       }
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed to join lobby"
     }
-  },
-  async leaveLobby(lobbyId: string) {
-    error.value = null
-    if (!currentRouter) return
+  }),
+  leaveLobby: action(async (router, lobbyId: string) => {
     try {
-      await currentRouter.send("lobby:leave", { lobbyId })
+      await router.send("lobby:leave", { lobbyId })
       if (lobby.value?.id === lobbyId) lobby.value = null
       const next = new Map(lobbyChatMessages.value)
       next.delete(lobbyId)
@@ -302,90 +310,81 @@ export const game = {
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed to leave"
     }
-  },
-  async readyLobby(lobbyId: string) {
-    error.value = null
-    if (!currentRouter) return
+  }),
+  readyLobby: action(async (router, lobbyId: string) => {
     try {
-      const res = await currentRouter.send("lobby:ready", { lobbyId })
+      const res = await router.send("lobby:ready", { lobbyId })
       if (!res.success) error.value = "Could not set ready"
     } catch (e) {
-      error.value = e instanceof Error ? e.message : "Failed"
+      error.value = e instanceof Error ? e.message : "Failed to set ready"
     }
-  },
-  async unreadyLobby(lobbyId: string) {
-    error.value = null
-    if (!currentRouter) return
+  }),
+  unreadyLobby: action(async (router, lobbyId: string) => {
     try {
-      const res = await currentRouter.send("lobby:unready", { lobbyId })
+      const res = await router.send("lobby:unready", { lobbyId })
       if (!res.success) error.value = "Could not unready"
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed"
     }
-  },
-  async transferLobbyOwner(lobbyId: string, newOwnerId: string) {
-    error.value = null
-    if (!currentRouter) return
-    try {
-      const res = await currentRouter.send("lobby:transferOwner", {
-        lobbyId,
-        newOwnerId,
-      })
-      if (!res.success) error.value = "Could not transfer owner"
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : "Failed"
+  }),
+  transferLobbyOwner: action(
+    async (router, lobbyId: string, newOwnerId: string) => {
+      try {
+        const res = await router.send("lobby:transferOwner", {
+          lobbyId,
+          newOwnerId,
+        })
+        if (!res.success) error.value = "Could not transfer owner"
+      } catch (e) {
+        error.value = e instanceof Error ? e.message : "Failed"
+      }
     }
-  },
-  async kickFromLobby(lobbyId: string, playerId: string) {
-    error.value = null
-    if (!currentRouter) return
+  ),
+  kickFromLobby: action(async (router, lobbyId: string, playerId: string) => {
     try {
-      const res = await currentRouter.send("lobby:kick", { lobbyId, playerId })
+      const res = await router.send("lobby:kick", { lobbyId, playerId })
       if (!res.success) error.value = "Could not kick player"
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed"
     }
-  },
-  async setLobbyVisibility(lobbyId: string, visibility: "open" | "private") {
-    error.value = null
-    if (!currentRouter) return
-    try {
-      const res = await currentRouter.send("lobby:setVisibility", {
-        lobbyId,
-        visibility,
-      })
-      if (!res.success) error.value = "Could not set visibility"
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : "Failed"
+  }),
+  setLobbyVisibility: action(
+    async (router, lobbyId: string, visibility: LobbyVisibility) => {
+      try {
+        const res = await router.send("lobby:setVisibility", {
+          lobbyId,
+          visibility,
+        })
+        if (!res.success) error.value = "Could not set visibility"
+      } catch (e) {
+        error.value = e instanceof Error ? e.message : "Failed"
+      }
     }
-  },
-  async sendLobbyChat(lobbyId: string, text: string) {
-    error.value = null
-    if (!currentRouter) return
+  ),
+  sendLobbyChat: action(async (router, lobbyId: string, text: string) => {
     try {
-      await currentRouter.send("lobby:sendChat", { lobbyId, text })
+      await router.send("lobby:sendChat", { lobbyId, text })
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed to send"
     }
-  },
-  async inviteFriendToLobby(lobbyId: string, friendId: string) {
-    error.value = null
-    if (!currentRouter) return
-    try {
-      const res = await currentRouter.send("lobby:inviteFriend", {
-        lobbyId,
-        friendId,
-      })
-      if (!res.success) error.value = "Could not invite"
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : "Failed"
+  }),
+  inviteFriendToLobby: action(
+    async (router, lobbyId: string, friendId: string) => {
+      try {
+        const res = await router.send("lobby:inviteFriend", {
+          lobbyId,
+          friendId,
+        })
+        if (!res.success) error.value = "Could not invite"
+      } catch (e) {
+        error.value = e instanceof Error ? e.message : "Failed"
+      }
     }
-  },
-  async acceptLobbyInvite(lobbyId: string) {
+  ),
+  acceptLobbyInvite: action(async (router, lobbyId: string) => {
     error.value = null
-    if (!currentRouter) return
     try {
-      const res = await currentRouter.send("lobby:acceptInvite", { lobbyId })
+      const res = await router.send("lobby:acceptInvite", { lobbyId })
       if (!res.success) error.value = "Could not join lobby"
       else {
         if (res.lobby) {
@@ -399,47 +398,53 @@ export const game = {
         lobbyInvites.value = lobbyInvites.value.filter(
           (inv) => inv.lobbyId !== lobbyId
         )
-        const list = await currentRouter.send("friends:list")
+        const list = await router.send("friends:list")
         friends.value = list.friends
       }
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed to join"
     }
-  },
-  dismissLobbyInvite(lobbyId: string) {
+  }),
+  dismissLobbyInvite: (lobbyId: string) => {
     lobbyInvites.value = lobbyInvites.value.filter(
       (inv) => inv.lobbyId !== lobbyId
     )
   },
-  async startLobby(lobbyId: string) {
-    error.value = null
-    if (!currentRouter) return
+  cancelLobbyInvite: action(async (router, lobbyId: string, userId: string) => {
     try {
-      const res = await currentRouter.send("lobby:start", { lobbyId })
+      const res = await router.send("lobby:cancelInvite", {
+        lobbyId,
+        userId,
+      })
+      if (!res.success) error.value = "Could not cancel invite"
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : "Failed"
+    }
+  }),
+  startLobby: action(async (router, lobbyId: string) => {
+    try {
+      const res = await router.send("lobby:start", { lobbyId })
       if (!res.success) error.value = "Could not start (all must be ready)"
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed to start"
     }
-  },
-  async takeTurn(gameId: string) {
-    error.value = null
-    if (!currentRouter) return
+  }),
+  takeTurn: action(async (router, gameId: string) => {
     try {
-      const res = await currentRouter.send("game:turn", { gameId })
+      const res = await router.send("game:turn", { gameId })
       if (!res.success) error.value = "Not your turn or game ended"
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed"
     }
-  },
-  async leaveGame() {
-    error.value = null
+  }),
+  leaveGame: action(async (router) => {
     const gameId = gameInstance.value?.id
-    if (!currentRouter || !gameId) {
+    if (!gameId) {
       gameInstance.value = null
       return
     }
     try {
-      const res = await currentRouter.send("game:leave", { gameId })
+      const res = await router.send("game:leave", { gameId })
       if (res.success) {
         gameInstance.value = null
         waitingForReconnect.value = null
@@ -447,35 +452,31 @@ export const game = {
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed to leave"
     }
-  },
-  async addFriend(userId: string) {
-    error.value = null
-    if (!currentRouter) return
+  }),
+  addFriend: action(async (router, userId: string) => {
     try {
-      const res = await currentRouter.send("friend_requests:send", {
+      const res = await router.send("friend_requests:send", {
         addresseeId: userId,
       })
       if (!res.success) error.value = "Could not send request"
       else {
-        const pending = await currentRouter.send("friend_requests:pending_sent")
+        const pending = await router.send("friend_requests:pending_sent")
         pendingSentAddresseeIds.value = pending.addresseeIds
       }
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed"
     }
-  },
-  async acceptFriendRequest(requesterId: string) {
-    error.value = null
-    if (!currentRouter) return
+  }),
+  acceptFriendRequest: action(async (router, requesterId: string) => {
     try {
-      const res = await currentRouter.send("friend_requests:accept", {
+      const res = await router.send("friend_requests:accept", {
         requesterId,
       })
       if (!res.success) error.value = "Could not accept"
       else {
         const [list, requests] = await Promise.all([
-          currentRouter.send("friends:list"),
-          currentRouter.send("friend_requests:list"),
+          router.send("friends:list"),
+          router.send("friend_requests:list"),
         ])
         friends.value = list.friends
         friendRequests.value = requests.requests
@@ -483,27 +484,23 @@ export const game = {
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed"
     }
-  },
-  async declineFriendRequest(requesterId: string) {
-    error.value = null
-    if (!currentRouter) return
+  }),
+  declineFriendRequest: action(async (router, requesterId: string) => {
     try {
-      await currentRouter.send("friend_requests:decline", { requesterId })
-      const res = await currentRouter.send("friend_requests:list")
+      await router.send("friend_requests:decline", { requesterId })
+      const res = await router.send("friend_requests:list")
       friendRequests.value = res.requests
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed"
     }
-  },
-  async removeFriend(friendId: string) {
-    error.value = null
-    if (!currentRouter) return
+  }),
+  removeFriend: action(async (router, friendId: string) => {
     try {
-      const res = await currentRouter.send("friends:remove", { friendId })
+      const res = await router.send("friends:remove", { friendId })
       if (!res.success) error.value = "Could not remove friend"
       else friends.value = friends.value.filter((f) => f.id !== friendId)
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed"
     }
-  },
+  }),
 }

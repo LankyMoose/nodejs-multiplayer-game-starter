@@ -70,9 +70,38 @@ export default function LobbyViewScreen({
 
       <LobbyPlayers lobby={lobby} userId={userId} />
 
+      {(lobby.invitedUsers?.length ?? 0) > 0 && (
+        <div className="shrink-0">
+          <p className="game-title text-xs uppercase tracking-wider text-(--game-text-dim) mb-1.5">
+            Invited
+          </p>
+          <ul className="flex flex-wrap gap-1.5 text-sm text-(--game-text)">
+            {(lobby.invitedUsers ?? []).map((u) => (
+              <li
+                key={u.id}
+                className="flex items-center gap-2 px-2 py-1 rounded bg-white/5 border border-(--game-surface-border)"
+              >
+                <span className="truncate">{u.name}</span>
+                {isOwner && (
+                  <button
+                    type="button"
+                    onclick={() => game.cancelLobbyInvite(lobby.id, u.id)}
+                    className="btn-ghost text-xs text-(--game-muted) hover:text-(--game-danger) shrink-0"
+                    title="Cancel invite"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <p className="text-xs text-(--game-text-dim) shrink-0">
-        {connectedPlayers.length} / {lobby.players.length} connected · need{" "}
-        {lobby.requiredPlayers} to start
+        {connectedPlayers.length} / {lobby.players.length} connected
+        {lobby.requiredPlayers < lobby.maxPlayers &&
+          ` - need ${lobby.requiredPlayers} to start`}
       </p>
 
       <LobbyChat

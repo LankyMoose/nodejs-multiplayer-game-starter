@@ -17,4 +17,6 @@ export interface GameLobby {
   visibility: LobbyVisibility;
   /** Set while a game is in progress; cleared when the game ends so players return to this lobby. */
   inGameId?: string;
+  /** Users who have been invited (pending); removed when they join. Prevents duplicate invites. */
+  invitedUsers?: Array<{ id: string; name: string }>;
 }

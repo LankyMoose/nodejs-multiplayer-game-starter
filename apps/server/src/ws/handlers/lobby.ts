@@ -44,6 +44,7 @@ export function createLobbyHandlers(ctx: WsContext) {
         readyPlayers: [],
         disconnectedPlayerIds: [],
         visibility: "private",
+        invitedUsers: [],
       });
       log.info({ lobbyId, userId: session.user.id }, "Lobby created");
       void emitFriendStatusToFriends(userId);
@@ -84,6 +85,9 @@ export function createLobbyHandlers(ctx: WsContext) {
         return { success: false, lobby: null };
       }
       lobby.players.push(socketPlayer);
+      if (lobby.invitedUsers) {
+        lobby.invitedUsers = lobby.invitedUsers.filter((u) => u.id !== userId);
+      }
       lobbyInvites.delete(userId);
       broadcastToUsers(
         lobby.players.map((p) => p.id),
@@ -136,18 +140,34 @@ export function createLobbyHandlers(ctx: WsContext) {
       if (lobby.players.some((p) => p.id === friendId))
         return { success: false };
       if (lobby.players.length >= lobby.maxPlayers) return { success: false };
+      const invited = lobby.invitedUsers ?? [];
+      if (invited.some((u) => u.id === friendId)) return { success: false };
       const { db, schema } = ctx;
+      const { user, userFriend } = schema;
       const [row] = await db
         .select()
-        .from(schema.userFriend)
+        .from(userFriend)
         .where(
           and(
-            eq(schema.userFriend.userId, userId),
-            eq(schema.userFriend.friendId, friendId),
+            eq(userFriend.userId, userId),
+            eq(userFriend.friendId, friendId),
           ),
         )
         .limit(1);
       if (!row) return { success: false };
+      const [friendRow] = await db
+        .select({ id: user.id, name: user.name })
+        .from(user)
+        .where(eq(user.id, friendId))
+        .limit(1);
+      const friendName = friendRow?.name ?? "Player";
+      if (!lobby.invitedUsers) lobby.invitedUsers = [];
+      lobby.invitedUsers.push({ id: friendId, name: friendName });
+      broadcastToUsers(
+        lobby.players.map((p) => p.id),
+        "lobby:updated",
+        lobby,
+      );
       lobbyInvites.set(friendId, { lobbyId, inviterId: userId });
       emitToUser(friendId, "lobby:invited", {
         lobbyId,
@@ -155,6 +175,25 @@ export function createLobbyHandlers(ctx: WsContext) {
         inviterName: session.user.name ?? "Someone",
       });
       log.info({ lobbyId, friendId }, "Lobby invite sent");
+      return { success: true };
+    },
+    "lobby:cancelInvite": ({ lobbyId, userId: targetUserId }) => {
+      const lobby = lobbies.get(lobbyId);
+      if (!lobby) return { success: false };
+      if (lobby.ownerId !== userId) return { success: false };
+      if (!lobby.invitedUsers?.some((u) => u.id === targetUserId))
+        return { success: false };
+      lobby.invitedUsers = lobby.invitedUsers.filter(
+        (u) => u.id !== targetUserId,
+      );
+      lobbyInvites.delete(targetUserId);
+      broadcastToUsers(
+        lobby.players.map((p) => p.id),
+        "lobby:updated",
+        lobby,
+      );
+      emitToUser(targetUserId, "lobby:inviteCancelled", { lobbyId });
+      log.info({ lobbyId, targetUserId }, "Lobby invite cancelled");
       return { success: true };
     },
     "lobby:acceptInvite": async ({ lobbyId }) => {
@@ -179,6 +218,9 @@ export function createLobbyHandlers(ctx: WsContext) {
       }
       lobbyInvites.delete(userId);
       lobby.players.push(socketPlayer);
+      if (lobby.invitedUsers) {
+        lobby.invitedUsers = lobby.invitedUsers.filter((u) => u.id !== userId);
+      }
       broadcastToUsers(
         lobby.players.map((p) => p.id),
         "lobby:updated",
