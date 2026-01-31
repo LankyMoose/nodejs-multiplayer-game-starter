@@ -1,98 +1,14 @@
 import {
-  createContext,
-  memo,
-  Signal,
-  signal,
-  Transition,
   TransitionState,
-  useComputed,
-  useContext,
-  useLayoutEffect,
-  useMemo,
+  memo,
   useRef,
+  useMemo,
+  useLayoutEffect,
+  useComputed,
 } from "kiru"
 import { className as cls } from "kiru/utils"
-
-export type Toast = {
-  id: number
-  type: "info" | "success" | "warning" | "danger"
-  children: () => JSX.Children
-  height: number
-  expired?: boolean
-  pauseOnHover?: boolean
-  paused?: boolean
-  remaining: Signal<number>
-  duration: number
-}
-
-const ToastItemContext = createContext<{ cancel: () => void }>(null!)
-
-export const useToastItem = () => useContext(ToastItemContext)
-
-const defaultDuration = 4000
-
-const toasts = signal<Toast[]>([])
-
-setInterval(() => {
-  let didExpire = false
-  for (let i = 0; i < toasts.value.length; i++) {
-    const t = toasts.value[i]
-    if (t.paused) continue
-    t.remaining.value -= 16
-    if (t.remaining.value <= 0) {
-      didExpire = true
-      t.expired = true
-    }
-  }
-  if (didExpire) {
-    toasts.notify()
-  }
-}, 1000 / 60)
-
-let id = 0
-
-type ToastOptions = {
-  type: Toast["type"]
-  children: () => JSX.Children
-  pauseOnHover?: boolean
-  duration?: number
-}
-export const toast = (options: ToastOptions) => {
-  const { type, children, duration, pauseOnHover } = options
-
-  const _duration = duration ?? defaultDuration
-  const toast: Toast = {
-    id: ++id,
-    type,
-    height: 70,
-    children,
-    remaining: signal(_duration),
-    duration: _duration,
-    pauseOnHover,
-  }
-
-  toasts.value = [...toasts.value, toast]
-}
-
-export const ToastsRoot: Kiru.FC = () => {
-  return toasts.value.map((toast, i) => (
-    <Transition
-      key={toast.id}
-      in={!toast.expired}
-      initialState="exited"
-      duration={{
-        in: 50,
-        out: 300,
-      }}
-      onTransitionEnd={(state) => {
-        if (state === "exited") {
-          toasts.value = toasts.value.filter((t) => t.id !== toast.id)
-        }
-      }}
-      element={(state) => <ToastItem toast={toast} state={state} index={i} />}
-    />
-  ))
-}
+import { Toast, toasts } from "./state"
+import { ToastItemContext } from "./context"
 
 type ToastItemProps = {
   toast: Toast
@@ -100,7 +16,11 @@ type ToastItemProps = {
   index: number
 }
 
-const ToastItem = memo(({ toast, state, index }: ToastItemProps) => {
+export default memo(function ToastItem({
+  toast,
+  state,
+  index,
+}: ToastItemProps) {
   const width = useRef(400)
   const translateX = state === "entered" ? 0 : width.current
   const translateY = useMemo<string>(() => {
@@ -125,10 +45,10 @@ const ToastItem = memo(({ toast, state, index }: ToastItemProps) => {
     toast.type === "info"
       ? "border-l-[var(--game-accent)]"
       : toast.type === "success"
-      ? "border-l-[var(--game-success)]"
-      : toast.type === "danger"
-      ? "border-l-[var(--game-danger)]"
-      : "border-l-[var(--game-gold)]"
+        ? "border-l-[var(--game-success)]"
+        : toast.type === "danger"
+          ? "border-l-[var(--game-danger)]"
+          : "border-l-[var(--game-gold)]"
 
   return (
     <div
@@ -175,10 +95,10 @@ function ToastProgress({ toast }: { toast: Toast }) {
       toast.type === "info"
         ? "var(--game-accent)"
         : toast.type === "success"
-        ? "var(--game-success)"
-        : toast.type === "danger"
-        ? "var(--game-danger)"
-        : "var(--game-gold)"
+          ? "var(--game-success)"
+          : toast.type === "danger"
+            ? "var(--game-danger)"
+            : "var(--game-gold)"
     return { width: `${pct}%`, backgroundColor: color }
   })
 

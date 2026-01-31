@@ -9,11 +9,11 @@ mount(<App />, document.getElementById("app")!, { name: "client" })
 document.body.addEventListener(
   "click",
   (e) => {
-    const btn = (e.target as Element).closest("button")
+    if (!(e.target instanceof HTMLElement)) return
+    const btn = e.target.closest("button")
     if (!btn) return
-    const isCancel =
-      btn.classList.contains("btn-ghost") ||
-      btn.classList.contains("btn-cancel")
+
+    const isCancel = btn.dataset.cancel === "true"
     play(isCancel ? "cancel" : "button")
   },
   { capture: true }

@@ -6,7 +6,7 @@ type Props = {
   userId: string
 }
 
-export function GameScreen({ gameInstance, userId }: Props) {
+export default function GameScreen({ gameInstance, userId }: Props) {
   const currentPlayerId =
     gameInstance.playerOrder[gameInstance.currentTurnIndex]
   const isMyTurn = currentPlayerId === userId

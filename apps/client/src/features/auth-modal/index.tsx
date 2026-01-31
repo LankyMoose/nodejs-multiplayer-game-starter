@@ -11,44 +11,7 @@ const submitError = signal<string | null>(null)
 const isSubmitting = signal(false)
 const error = computed(() => submitError.value ?? auth.$error?.message ?? null)
 
-async function handleSubmit(e: Event, mode: FormMode) {
-  e.preventDefault()
-  submitError.value = null
-  isSubmitting.value = true
-
-  if (mode === "signup") {
-    const displayNameError = validateDisplayName(displayName.value.trim())
-    if (displayNameError) {
-      submitError.value = displayNameError
-      return
-    }
-    const { error } = await auth.client.signUp.email({
-      email: email.value,
-      password: password.value,
-      name: displayName.value.trim() || "User",
-    })
-    if (error) {
-      const msg = (error as { message?: string }).message
-      submitError.value = msg ? String(msg) : "Sign up failed"
-      isSubmitting.value = false
-      return
-    }
-  } else {
-    const { error } = await auth.client.signIn.email({
-      email: email.value,
-      password: password.value,
-    })
-    if (error) {
-      const msg = (error as { message?: string }).message
-      submitError.value = msg ? String(msg) : "Sign in failed"
-      isSubmitting.value = false
-      return
-    }
-  }
-  window.location.href = "/"
-}
-
-export function AuthModal() {
+export default function AuthModal() {
   const [mode, setMode] = useState<FormMode>("signin")
 
   return (
@@ -160,8 +123,8 @@ export function AuthModal() {
             {isSubmitting.value
               ? "Please wait…"
               : mode === "signin"
-              ? "Sign in"
-              : "Create account"}
+                ? "Sign in"
+                : "Create account"}
           </button>
         </form>
       </div>
@@ -192,4 +155,41 @@ function FormModeButton({
       {children}
     </button>
   )
+}
+
+async function handleSubmit(e: Event, mode: FormMode) {
+  e.preventDefault()
+  submitError.value = null
+  isSubmitting.value = true
+
+  if (mode === "signup") {
+    const displayNameError = validateDisplayName(displayName.value.trim())
+    if (displayNameError) {
+      submitError.value = displayNameError
+      return
+    }
+    const { error } = await auth.client.signUp.email({
+      email: email.value,
+      password: password.value,
+      name: displayName.value.trim() || "User",
+    })
+    if (error) {
+      const msg = (error as { message?: string }).message
+      submitError.value = msg ? String(msg) : "Sign up failed"
+      isSubmitting.value = false
+      return
+    }
+  } else {
+    const { error } = await auth.client.signIn.email({
+      email: email.value,
+      password: password.value,
+    })
+    if (error) {
+      const msg = (error as { message?: string }).message
+      submitError.value = msg ? String(msg) : "Sign in failed"
+      isSubmitting.value = false
+      return
+    }
+  }
+  window.location.href = "/"
 }

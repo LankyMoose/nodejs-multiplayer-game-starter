@@ -1,10 +1,10 @@
+import { signal } from "kiru"
 import { game } from "@/state/game"
 import { ws } from "@/state/ws"
-import { signal } from "kiru"
 
 const joinId = signal("")
 
-export function LobbySetupScreen() {
+export default function LobbySetupScreen() {
   return (
     <div className="game-panel p-5 flex flex-col gap-5">
       <h2 className="game-title text-lg tracking-wide text-(--game-text)">

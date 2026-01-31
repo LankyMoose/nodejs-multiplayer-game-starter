@@ -1,24 +1,10 @@
-import { computed } from "kiru"
 import { auth } from "@/state/auth"
-import { AuthModal } from "@/features/auth-modal"
-import { ConnectedView } from "@/screens/connected"
-import { DisconnectedScreen } from "@/screens/Disconnected"
-import { ws } from "./state/ws"
-import { game } from "./state/game"
-import { ToastsRoot } from "./features/toast"
-
-type DisplayMode = "loading" | "auth" | "disconnected" | "connected"
-const displayMode = computed<DisplayMode>(() => {
-  if (auth.$isLoading) return "loading"
-  if (!auth.$user) return "auth"
-
-  const wsState = ws.current?.$connectionState
-
-  if (wsState === "disconnected") return "disconnected"
-  if (wsState !== "connected" || !game.$ready) return "loading"
-
-  return "connected"
-})
+import { ws } from "@/state/ws"
+import { game } from "@/state/game"
+import ToastsRoot from "@/features/toasts"
+import AuthModal from "@/features/auth-modal"
+import DisconnectedScreen from "@/screens/disconnected"
+import ConnectedScreen from "@/screens/connected"
 
 export default function App() {
   return (
@@ -30,14 +16,18 @@ export default function App() {
 }
 
 function ScreenSwitch() {
-  switch (displayMode.value) {
-    case "loading":
-      return <div className="loader" />
-    case "auth":
-      return <AuthModal />
-    case "disconnected":
-      return <DisconnectedScreen />
-    case "connected":
-      return <ConnectedView userId={auth.$user!.id} />
-  }
+  const authLoading = auth.$isLoading,
+    user = auth.$user,
+    wsState = ws.current?.$connectionState,
+    gameReady = game.$ready
+
+  if (authLoading) return <Loader />
+  if (!user) return <AuthModal />
+
+  if (wsState === "disconnected") return <DisconnectedScreen />
+  if (wsState !== "connected" || !gameReady) return <Loader />
+
+  return <ConnectedScreen userId={user.id} />
 }
+
+const Loader = () => <div className="loader" />

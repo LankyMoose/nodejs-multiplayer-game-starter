@@ -1,14 +1,13 @@
 import type { ClientRouter } from "shared"
 import type { GameInstance, GameLobby, WebSocketContract } from "shared"
 import { signal } from "kiru"
-import { toast } from "@/features/toast"
+import { toast } from "@/features/toasts"
 
 const lobby = signal<GameLobby | null>(null)
+
 const gameInstance = signal<GameInstance | null>(null)
 const error = signal<string | null>(null)
-const friends = signal<
-  { id: string; name: string; online: boolean }[]
->([])
+const friends = signal<{ id: string; name: string; online: boolean }[]>([])
 const friendRequests = signal<{ requesterId: string; requesterName: string }[]>(
   []
 )
@@ -98,6 +97,12 @@ export function bindRouter(router: ClientRouter<WebSocketContract> | null) {
     if (currentRouter !== router) return
     lobby.value = state.lobby
     gameInstance.value = state.game
+    if (state.lobby) {
+      toast({
+        type: "info",
+        children: () => `Reconnected to lobby`,
+      })
+    }
     ready.value = true
   })
 

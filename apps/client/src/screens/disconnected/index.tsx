@@ -1,6 +1,6 @@
-import { env } from "../env"
+import { env } from "@/env"
 
-export function DisconnectedScreen() {
+export default function DisconnectedScreen() {
   return (
     <div className="game-panel p-8 max-w-sm text-center">
       <h2 className="game-title text-lg tracking-wide text-(--game-text) mb-2">
