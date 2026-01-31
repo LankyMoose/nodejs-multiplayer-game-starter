@@ -9,47 +9,52 @@ type Props = {
 export function GameScreen({ gameInstance, userId }: Props) {
   const currentPlayerId =
     gameInstance.playerOrder[gameInstance.currentTurnIndex]
-
   const isMyTurn = currentPlayerId === userId
 
   return (
-    <div className="flex flex-col gap-4 border border-gray-600 rounded-lg p-4">
+    <div className="game-panel p-5 flex flex-col gap-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-primary">
+        <h2 className="game-title text-lg tracking-wide text-(--game-text)">
           Game {gameInstance.status === "finished" ? "— Over" : ""}
         </h2>
         <button
           type="button"
           onclick={game.leaveGame}
-          className="text-sm text-gray-400 hover:text-primary"
+          className="btn-ghost text-sm"
         >
           Leave
         </button>
       </div>
-      <p className="text-xs text-gray-500 font-mono break-all">
-        ID: {gameInstance.id}
+
+      <p className="text-xs font-mono text-(--game-text-dim) break-all bg-black/20 px-2 py-1.5 border border-(--game-surface-border)">
+        {gameInstance.id}
       </p>
+
       {gameInstance.status === "playing" ? (
-        <>
+        <div className="flex flex-col gap-4">
           <p className="text-sm">
             {isMyTurn ? (
-              <span className="text-green-400">Your turn</span>
+              <span className="badge badge-success text-base py-1.5 px-3">
+                Your turn
+              </span>
             ) : (
-              <span className="text-gray-400">Waiting for other player…</span>
+              <span className="text-(--game-text-dim)">
+                Waiting for other player…
+              </span>
             )}
           </p>
           {isMyTurn && (
             <button
               type="button"
               onclick={() => game.takeTurn(gameInstance.id)}
-              className="px-4 py-2 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-sm w-fit"
+              className="btn-primary w-fit"
             >
               Take turn
             </button>
           )}
-        </>
+        </div>
       ) : (
-        <p className="text-sm text-gray-400">Game finished.</p>
+        <p className="text-sm text-(--game-text-dim)">Game finished.</p>
       )}
     </div>
   )

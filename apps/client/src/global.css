@@ -1,13 +1,15 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
+@font-face {
+  font-family: "m6x11";
+  src:
+    url("/fonts/m6x11plus-webfont.woff2") format("woff2"),
+    url("/fonts/m6x11plus-webfont.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
 @layer base {
 
   *,
@@ -20,71 +22,43 @@
 }
 
 :root {
-  background-color: rgb(21 19 19);
-  color: #e5e5e5;
+  --game-bg: #1a1625;
+  --game-surface: #252033;
+  --game-surface-border: #3d3654;
+  --game-accent: #8b5cf6;
+  --game-accent-hover: #a78bfa;
+  --game-gold: #fbbf24;
+  --game-gold-dim: #d4a012;
+  --game-success: #22c55e;
+  --game-success-hover: #4ade80;
+  --game-danger: #ef4444;
+  --game-danger-hover: #f87171;
+  --game-muted: #6b7280;
+  --game-text: #e5e7eb;
+  --game-text-dim: #9ca3af;
+  --font-pixel: "m6x11", "Courier New", monospace;
   color-scheme: dark;
   min-height: 100vh;
-  background: radial-gradient(72vh 60vh at 50% -20vh, rgba(61, 17, 31, 0.6) 0%, transparent 100%),
-    radial-gradient(75% 35% at 50% 95%, rgba(111, 36, 141, 0.15) 0%, transparent 90%);
-  background-attachment: fixed;
-  --color-primary: #e5e5e5;
-}
-
-/* HTML: <div class="loader"></div> */
-.loader {
-  display: inline-grid;
-  width: 30px;
-  aspect-ratio: 1;
-  background: #574951;
-  animation:
-    l12-0 4s steps(4) infinite,
-    l12-1 6s linear infinite;
-}
-
-.loader:before,
-.loader:after {
-  content: "";
-  grid-area: 1/1;
-  background: #83988E;
-  clip-path: polygon(100% 50%, 65.45% 97.55%, 9.55% 79.39%, 9.55% 20.61%, 65.45% 2.45%);
-  transform-origin: right;
-  translate: -100% 50%;
-  scale: 1.7;
-  animation: l12-2 1s linear infinite;
-}
-
-.loader:after {
-  clip-path: polygon(90.45% 79.39%, 34.55% 97.55%, 0% 50%, 34.55% 2.45%, 90.45% 20.61%);
-  transform-origin: left;
-  translate: 100% -50%;
-}
-
-@keyframes l12-0 {
-  to {
-    rotate: 1turn
-  }
-}
-
-@keyframes l12-1 {
-  to {
-    transform: rotate(1turn)
-  }
-}
-
-@keyframes l12-2 {
-  0% {
-    rotate: 36deg
-  }
-
-  to {
-    rotate: -126deg
-  }
+  background-color: var(--game-bg);
+  color: var(--game-text);
+  /* subtle pixel-friendly grid feel */
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 16px 16px;
+  --color-primary: var(--game-text);
 }
 
 body {
   max-height: 100vh;
   max-width: 100vw;
   overflow: hidden;
+  font-family: var(--font-pixel);
+  letter-spacing: 1px;
+  font-smooth: never;
+  -webkit-font-smoothing: none;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 #app {
@@ -92,15 +66,152 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  min-height: 100vh;
   width: 100vw;
+  padding: 1rem;
 }
 
 button {
   cursor: pointer;
+  font-family: var(--font-pixel);
+  transition: transform 0.08s ease;
+}
 
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
+button:hover:not(:disabled) {
+  opacity: 0.95;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+input,
+textarea,
+select {
+  font-family: var(--font-pixel);
+}
+
+/* Pixel-art panels: sharp corners, 2px border */
+.game-panel {
+  background: var(--game-surface);
+  border: 2px solid var(--game-surface-border);
+  border-radius: 0;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+.game-title {
+  font-family: var(--font-pixel);
+  font-weight: normal;
+  color: var(--game-text);
+}
+
+.btn-primary {
+  background: var(--game-accent);
+  color: white;
+  font-family: var(--font-pixel);
+  padding: 0.5rem 1rem;
+  border-radius: 0;
+  border: 2px solid var(--game-accent-hover);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.25);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--game-accent-hover);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+.btn-success {
+  background: var(--game-success);
+  color: white;
+  font-family: var(--font-pixel);
+  padding: 0.5rem 1rem;
+  border-radius: 0;
+  border: 2px solid var(--game-success-hover);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.25);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: var(--game-success-hover);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+.btn-gold {
+  background: var(--game-gold);
+  color: #1f2937;
+  font-family: var(--font-pixel);
+  padding: 0.5rem 1rem;
+  border-radius: 0;
+  border: 2px solid var(--game-gold-dim);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.25);
+}
+
+.btn-gold:hover:not(:disabled) {
+  filter: brightness(1.1);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+.btn-ghost {
+  color: var(--game-text-dim);
+  background: transparent;
+  font-family: var(--font-pixel);
+  padding: 0.375rem 0.75rem;
+  border-radius: 0;
+  border: 2px solid transparent;
+  font-size: 0.875rem;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--game-text);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--game-surface-border);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0;
+  font-size: 0.75rem;
+  font-family: var(--font-pixel);
+  border: 1px solid transparent;
+}
+
+.badge-gold {
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--game-gold);
+  border-color: var(--game-gold-dim);
+}
+
+.badge-success {
+  background: rgba(34, 197, 94, 0.2);
+  color: var(--game-success);
+  border-color: var(--game-success-hover);
+}
+
+.badge-muted {
+  background: rgba(107, 114, 128, 0.25);
+  color: var(--game-text-dim);
+  border-color: var(--game-muted);
+}
+
+/* Loader: pixel-style squares */
+.loader {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--game-surface-border);
+  border-top-color: var(--game-accent);
+  border-radius: 0;
+  animation: loader-spin 0.6s linear infinite;
+}
+
+@keyframes loader-spin {
+  to {
+    transform: rotate(1turn);
   }
 }

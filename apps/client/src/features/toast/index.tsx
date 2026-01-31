@@ -121,6 +121,15 @@ const ToastItem = memo(({ toast, state, index }: ToastItemProps) => {
     width.current = box.width + 32
   }, [])
 
+  const accentBorder =
+    toast.type === "info"
+      ? "border-l-[var(--game-accent)]"
+      : toast.type === "success"
+        ? "border-l-[var(--game-success)]"
+        : toast.type === "danger"
+          ? "border-l-[var(--game-danger)]"
+          : "border-l-[var(--game-gold)]"
+
   return (
     <div
       ref={ref}
@@ -134,16 +143,14 @@ const ToastItem = memo(({ toast, state, index }: ToastItemProps) => {
         transform: `translate(${translateX}px, ${translateY})`,
       }}
       className={cls(
-        "transition-transform duration-300",
-        "absolute right-4 bottom-4 sm:p-2",
-        "rounded flex flex-col items-start justify-between overflow-hidden shadow",
-        toast.type === "info" && "bg-blue-500 dark:bg-blue-600",
-        toast.type === "success" && "bg-green-600 dark:bg-green-700",
-        toast.type === "danger" && "bg-red-500 dark:bg-red-600",
-        toast.type === "warning" && "bg-yellow-500 dark:bg-yellow-600"
+        "transition-transform duration-300 ease-out",
+        "absolute right-4 bottom-4 left-4 sm:left-auto sm:max-w-sm",
+        "game-panel border-l-4 pl-4 pr-3 py-3 overflow-hidden",
+        "flex flex-col items-stretch justify-between gap-2",
+        accentBorder
       )}
     >
-      <div>
+      <div className="text-sm text-[var(--game-text)] leading-snug">
         <ToastItemContext.Provider
           value={{
             cancel: () => {
@@ -163,10 +170,30 @@ const ToastItem = memo(({ toast, state, index }: ToastItemProps) => {
 function ToastProgress({ toast }: { toast: Toast }) {
   const styles = useComputed(() => {
     const remaining = toast.remaining.value
-    return `width: ${Math.abs(100 - (remaining / toast.duration) * 100)}%`
+    const pct = Math.max(0, 100 - (remaining / toast.duration) * 100)
+    const color =
+      toast.type === "info"
+        ? "var(--game-accent)"
+        : toast.type === "success"
+          ? "var(--game-success)"
+          : toast.type === "danger"
+            ? "var(--game-danger)"
+            : "var(--game-gold)"
+    return { width: `${pct}%`, backgroundColor: color }
   })
 
   return (
-    <div className="absolute left-0 bottom-0 h-1 bg-white/75" style={styles} />
+    <div
+      className="absolute left-0 right-0 bottom-0 h-0.5 overflow-hidden bg-white/10"
+      role="progressbar"
+      aria-valuenow={toast.duration - toast.remaining.value}
+      aria-valuemin={0}
+      aria-valuemax={toast.duration}
+    >
+      <div
+        className="h-full transition-[width] duration-150"
+        style={styles}
+      />
+    </div>
   )
 }

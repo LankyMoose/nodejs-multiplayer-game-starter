@@ -23,60 +23,74 @@ export function LobbyViewScreen({
     connectedPlayers.every((p) => lobby.readyPlayers.includes(p.id))
 
   return (
-    <div className="flex flex-col gap-4 border border-gray-600 rounded-lg p-4">
+    <div className="game-panel p-5 flex flex-col gap-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-primary">Lobby</h2>
+        <h2 className="game-title text-lg tracking-wide text-(--game-text)">
+          Lobby
+        </h2>
         <button
           type="button"
           onclick={() => game.leaveLobby(lobby.id)}
-          className="text-sm text-gray-400 hover:text-primary"
+          className="btn-ghost text-sm"
         >
           Leave
         </button>
       </div>
-      <p className="text-xs text-gray-500 font-mono break-all">
-        ID: {lobby.id}
+
+      <p className="text-xs font-mono text-(--game-text-dim) break-all bg-black/20 px-2 py-1.5 border border-(--game-surface-border)">
+        {lobby.id}
       </p>
-      <ul className="flex flex-col gap-1">
+
+      <ul className="flex flex-col gap-3">
         {lobby.players.map((p) => (
-          <li key={p.id} className="text-sm flex items-center gap-2 flex-wrap">
-            <span className={p.id === userId ? "text-purple-300" : ""}>
+          <li
+            key={p.id}
+            className="flex items-center gap-2 flex-wrap text-sm py-2 px-3 bg-white/5 border-2 border-(--game-surface-border)"
+          >
+            <span
+              className={
+                p.id === userId
+                  ? "text-(--game-accent) font-semibold"
+                  : "text-(--game-text)"
+              }
+            >
               {p.name}
               {p.id === userId ? " (you)" : ""}
             </span>
             {lobby.ownerId === p.id && (
-              <span title="Lobby Owner">
-                <CrownIcon className="w-4 h-4 text-amber-400" />
+              <span title="Lobby Owner" className="flex items-center">
+                <CrownIcon className="w-4 h-4 text-(--game-gold)" />
               </span>
             )}
             {disconnected.includes(p.id) && (
-              <span className="text-gray-500 text-xs">disconnected</span>
+              <span className="badge badge-muted">disconnected</span>
             )}
-            {lobby.readyPlayers.includes(p.id) && (
-              <span className="text-green-400 text-xs">ready</span>
-            )}
+            {lobby.readyPlayers.includes(p.id) &&
+              !disconnected.includes(p.id) && (
+                <span className="badge badge-success">ready</span>
+              )}
             {lobby.ownerId === userId && p.id !== userId && (
-              <>
+              <div className="flex gap-1 ml-auto">
                 <button
                   type="button"
                   onclick={() => game.transferLobbyOwner(lobby.id, p.id)}
-                  className="text-xs text-gray-400 hover:text-primary underline"
+                  className="btn-ghost text-xs"
                 >
                   Make owner
                 </button>
                 <button
                   type="button"
                   onclick={() => game.kickFromLobby(lobby.id, p.id)}
-                  className="text-xs text-red-400 hover:text-red-300 underline"
+                  className="btn-ghost text-xs text-(--game-danger) hover:bg-red-500/10"
                 >
                   Kick
                 </button>
-              </>
+              </div>
             )}
             {p.id !== userId &&
               !friendIds.includes(p.id) &&
               pendingSentAddresseeIds.includes(p.id) && (
-                <span className="text-gray-500 text-xs">pending</span>
+                <span className="badge badge-muted">pending</span>
               )}
             {p.id !== userId &&
               !friendIds.includes(p.id) &&
@@ -84,7 +98,7 @@ export function LobbyViewScreen({
                 <button
                   type="button"
                   onclick={() => game.addFriend(p.id)}
-                  className="text-xs text-blue-400 hover:text-blue-300 underline"
+                  className="btn-ghost text-xs text-(--game-accent) hover:bg-(--game-accent)/15"
                 >
                   Add friend
                 </button>
@@ -92,17 +106,23 @@ export function LobbyViewScreen({
           </li>
         ))}
       </ul>
-      <p className="text-xs text-gray-500">
+
+      <p className="text-xs text-(--game-text-dim)">
         {connectedPlayers.length} / {lobby.players.length} connected · need{" "}
         {lobby.requiredPlayers} to start
       </p>
-      <div className="flex gap-2">
+
+      <div className="flex gap-3 flex-wrap">
         <button
           type="button"
           onclick={() =>
             isReady ? game.unreadyLobby(lobby.id) : game.readyLobby(lobby.id)
           }
-          className="px-4 py-2 rounded-md bg-green-700 hover:bg-green-600 text-white text-sm"
+          className={
+            isReady
+              ? "btn-ghost border border-(--game-success)/50 text-(--game-success)"
+              : "btn-success"
+          }
         >
           {isReady ? "Unready" : "Ready"}
         </button>
@@ -110,7 +130,7 @@ export function LobbyViewScreen({
           <button
             type="button"
             onclick={() => game.startLobby(lobby.id)}
-            className="px-4 py-2 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-sm"
+            className="btn-gold"
           >
             Start game
           </button>

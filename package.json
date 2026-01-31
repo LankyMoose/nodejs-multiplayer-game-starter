@@ -1,5 +1,5 @@
 {
-  "name": "3up1down",
+  "name": "nodejs-multiplayer-game-starter",
   "type": "module",
   "scripts": {
     "dev": "node builderman.js dev",

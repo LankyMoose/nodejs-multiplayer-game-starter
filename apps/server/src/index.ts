@@ -67,7 +67,7 @@ const createWsTransport = (socket: WebSocket): Transport => ({
   send: (message) => socket.send(JSON.stringify(message)),
   onMessage: (cb) => {
     const handler: (this: WebSocket, ...args: any[]) => void = (
-      raw: Buffer
+      raw: Buffer,
     ) => {
       const msg = JSON.parse(raw.toString()) as WireMessage;
       cb(msg);
@@ -125,7 +125,7 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
 
   const router = createServerRouter<WebSocketContract>(
     createWsTransport(socket),
-    createWsHandlers(wsContext)
+    createWsHandlers(wsContext),
   );
 
   registerUser(session.user.id, router, session);
@@ -141,16 +141,16 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
 
   // On connect: mark user as back in any lobbies they were disconnected from
   const lobby = [...lobbies.values()].find((l) =>
-    l.disconnectedPlayerIds?.includes(userId)
+    l.disconnectedPlayerIds?.includes(userId),
   );
   if (lobby) {
     lobby.disconnectedPlayerIds = lobby.disconnectedPlayerIds?.filter(
-      (id) => id !== userId
+      (id) => id !== userId,
     );
     broadcastToUsers(
       lobby.players.map((p) => p.id),
       "lobby:updated",
-      lobby
+      lobby,
     );
     app.log.info({ lobbyId: lobby.id, userId }, "Player reconnected to lobby");
   }
@@ -159,7 +159,7 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
     const disconnectingUserId = session.user.id;
     app.log.info(
       { userId: disconnectingUserId },
-      "WebSocket client disconnected"
+      "WebSocket client disconnected",
     );
 
     unregisterUser(disconnectingUserId, router);
@@ -186,7 +186,7 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
 
         if (lobby.ownerId === disconnectingUserId) {
           const connected = lobby.players.filter(
-            (p) => !lobby.disconnectedPlayerIds!.includes(p.id)
+            (p) => !lobby.disconnectedPlayerIds!.includes(p.id),
           );
           const newOwner =
             connected[Math.floor(Math.random() * connected.length)];
@@ -194,7 +194,7 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
             lobby.ownerId = newOwner.id;
             app.log.info(
               { lobbyId: lobby.id, newOwnerId: lobby.ownerId },
-              "Lobby owner reassigned on disconnect"
+              "Lobby owner reassigned on disconnect",
             );
           }
         }
@@ -202,7 +202,7 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
         broadcastToUsers(
           lobby.players.map((p) => p.id),
           "lobby:updated",
-          lobby
+          lobby,
         );
       }
     }
@@ -212,7 +212,7 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
 });
 
 app.get("/", async (_, reply) => {
-  reply.send({ ok: true, message: "3up1down server" });
+  reply.send({ ok: true, message: "hello world" });
 });
 
 const port = Number(process.env.PORT ?? 6969);

@@ -1,7 +1,12 @@
+import { env } from "../env"
+
 export function DisconnectedScreen() {
   return (
-    <div className="flex flex-col items-center justify-center gap-6 p-6 max-w-sm text-center min-h-[50vh]">
-      <p className="text-gray-400 text-sm">
+    <div className="game-panel p-8 max-w-sm text-center">
+      <h2 className="game-title text-lg tracking-wide text-(--game-text) mb-2">
+        {env.APP_NAME}
+      </h2>
+      <p className="text-(--game-text-dim) text-sm">
         Unable to connect. Check your network or refresh the page.
       </p>
     </div>
