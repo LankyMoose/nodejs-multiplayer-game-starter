@@ -4,9 +4,13 @@ import { GameLobby } from "shared"
 export function LobbyViewScreen({
   lobby,
   userId,
+  friendIds,
+  pendingSentAddresseeIds,
 }: {
   lobby: GameLobby
   userId: string
+  friendIds: string[]
+  pendingSentAddresseeIds: string[]
 }) {
   const disconnected = lobby.disconnectedPlayerIds ?? []
   const connectedPlayers = lobby.players.filter((p) => !disconnected.includes(p.id))
@@ -66,6 +70,20 @@ export function LobbyViewScreen({
                   Kick
                 </button>
               </>
+            )}
+            {p.id !== userId && !friendIds.includes(p.id) &&
+              pendingSentAddresseeIds.includes(p.id) && (
+              <span className="text-gray-500 text-xs">pending</span>
+            )}
+            {p.id !== userId && !friendIds.includes(p.id) &&
+              !pendingSentAddresseeIds.includes(p.id) && (
+              <button
+                type="button"
+                onclick={() => game.addFriend(p.id)}
+                className="text-xs text-blue-400 hover:text-blue-300 underline"
+              >
+                Add friend
+              </button>
             )}
           </li>
         ))}

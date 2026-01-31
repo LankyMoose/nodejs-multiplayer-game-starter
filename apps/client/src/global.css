@@ -81,6 +81,12 @@
   }
 }
 
+body {
+  max-height: 100vh;
+  max-width: 100vw;
+  overflow: hidden;
+}
+
 #app {
   display: flex;
   flex-direction: column;

@@ -8,6 +8,17 @@ export type WebSocketContract = Contract<{
     "match:started": string;
     "lobby:updated": GameLobby;
     "lobby:kicked": { lobbyId: string };
+    "friend_request:received": {
+      requesterId: string;
+      requesterName: string;
+    };
+    "friend_request:accepted": {
+      friendId: string;
+      friendName: string;
+    };
+    "friend:removed": { friendId: string };
+    "friend:online": { userId: string };
+    "friend:offline": { userId: string };
     "game:started": GameInstance;
     "game:turn": { game: GameInstance; previousPlayerId: string };
     "game:ended": GameInstance;
@@ -42,6 +53,31 @@ export type WebSocketContract = Contract<{
     };
     "game:turn": {
       req: { gameId: string };
+      res: { success: boolean };
+    };
+    "friends:list": {
+      res: { friends: { id: string; name: string; online: boolean }[] };
+    };
+    "friends:remove": {
+      req: { friendId: string };
+      res: { success: boolean };
+    };
+    "friend_requests:list": {
+      res: { requests: { requesterId: string; requesterName: string }[] };
+    };
+    "friend_requests:send": {
+      req: { addresseeId: string };
+      res: { success: boolean };
+    };
+    "friend_requests:pending_sent": {
+      res: { addresseeIds: string[] };
+    };
+    "friend_requests:accept": {
+      req: { requesterId: string };
+      res: { success: boolean };
+    };
+    "friend_requests:decline": {
+      req: { requesterId: string };
       res: { success: boolean };
     };
   };

@@ -5,6 +5,7 @@ import { ConnectedView } from "@/screens/connected"
 import { DisconnectedScreen } from "@/screens/Disconnected"
 import { ws } from "./state/ws"
 import { game } from "./state/game"
+import { ToastsRoot } from "./features/toast"
 
 const displayMode = computed(() => {
   if (auth.$isLoading) {
@@ -27,6 +28,15 @@ const displayMode = computed(() => {
 })
 
 export default function App() {
+  return (
+    <>
+      <ScreenSwitch />
+      <ToastsRoot />
+    </>
+  )
+}
+
+function ScreenSwitch() {
   switch (displayMode.value) {
     case "loading":
       return <div className="loader" />

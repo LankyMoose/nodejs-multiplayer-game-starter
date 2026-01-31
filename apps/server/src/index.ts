@@ -22,6 +22,11 @@ import {
   emitToUser,
 } from "./game/store.js";
 import { GAME_LOBBY_LIMITS } from "./game/config.js";
+import { db } from "./db/index.js";
+import { user, userFriend, friendRequest } from "./db/schema.js";
+import { eq } from "drizzle-orm";
+import { createWsHandlers } from "./ws/handlers/index.js";
+import type { WsContext } from "./ws/context.js";
 
 const app = Fastify({ logger: true });
 
@@ -103,230 +108,43 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
 
   app.log.info({ url: req.url, userId }, "WebSocket client connected");
 
+  const wsContext: WsContext = {
+    userId,
+    session,
+    socketPlayer,
+    log: app.log,
+    lobbies,
+    games,
+    broadcastToUsers,
+    emitToUser,
+    hasConnections,
+    db,
+    schema: { user, userFriend, friendRequest },
+    GAME_LOBBY_LIMITS,
+  };
+
   const router = createServerRouter<WebSocketContract>(
     createWsTransport(socket),
-    {
-      ping: () => "pong",
-      "match:join": ({ id }) => {
-        app.log.info({ id }, "Client joined match");
-        return { success: false };
-      },
-      "session:state": () => {
-        const userLobby = [...lobbies.values()].find((l) =>
-          l.players.some((p) => p.id === userId)
-        );
-        const userGame = [...games.values()].find((g) =>
-          g.playerOrder.includes(userId)
-        );
-        return {
-          lobby: userLobby ?? null,
-          game: userGame ?? null,
-        };
-      },
-      "lobby:create": () => {
-        const lobbyId = crypto.randomUUID();
-        lobbies.set(lobbyId, {
-          id: lobbyId,
-          ownerId: userId,
-          maxPlayers: GAME_LOBBY_LIMITS.maxPlayers,
-          requiredPlayers: GAME_LOBBY_LIMITS.requiredPlayers,
-          players: [socketPlayer],
-          readyPlayers: [],
-          disconnectedPlayerIds: [],
-        });
-        app.log.info({ lobbyId, userId: session.user.id }, "Lobby created");
-        return { lobbyId };
-      },
-      "lobby:join": ({ lobbyId }) => {
-        const lobby = lobbies.get(lobbyId);
-        if (!lobby) {
-          return { success: false, lobby: null };
-        }
-        const alreadyInLobby = lobby.players.some((p) => p.id === userId);
-        if (alreadyInLobby) {
-          const disconnected = lobby.disconnectedPlayerIds ?? [];
-          if (disconnected.includes(userId)) {
-            lobby.disconnectedPlayerIds = (lobby.disconnectedPlayerIds ?? []).filter(
-              (id) => id !== userId
-            );
-            broadcastToUsers(
-              lobby.players.map((p) => p.id),
-              "lobby:updated",
-              lobby
-            );
-            app.log.info({ lobbyId, userId }, "Player rejoined lobby");
-          }
-          return { success: true, lobby };
-        }
-        if (lobby.players.length >= lobby.maxPlayers) {
-          return { success: false, lobby: null };
-        }
-        lobby.players.push(socketPlayer);
-        broadcastToUsers(
-          lobby.players.map((p) => p.id),
-          "lobby:updated",
-          lobby
-        );
-        app.log.info({ lobbyId, userId }, "Player joined lobby");
-        return { success: true, lobby };
-      },
-      "lobby:leave": ({ lobbyId }) => {
-        const lobby = lobbies.get(lobbyId);
-        if (!lobby) return { success: false };
-        const leavingUserId = session.user.id;
-        lobby.players = lobby.players.filter((p) => p.id !== leavingUserId);
-        lobby.readyPlayers = lobby.readyPlayers.filter(
-          (id) => id !== leavingUserId
-        );
-        lobby.disconnectedPlayerIds = (lobby.disconnectedPlayerIds ?? []).filter(
-          (id) => id !== leavingUserId
-        );
-        if (lobby.players.length === 0) lobbies.delete(lobbyId);
-        else {
-          if (lobby.ownerId === leavingUserId) {
-            const disconnected = lobby.disconnectedPlayerIds ?? [];
-            const connected = lobby.players.filter(
-              (p) => !disconnected.includes(p.id)
-            );
-            const newOwner =
-              connected[Math.floor(Math.random() * connected.length)];
-            if (newOwner) lobby.ownerId = newOwner.id;
-          }
-          broadcastToUsers(
-            lobby.players.map((p) => p.id),
-            "lobby:updated",
-            lobby
-          );
-        }
-        return { success: true };
-      },
-      "lobby:ready": ({ lobbyId }) => {
-        const lobby = lobbies.get(lobbyId);
-        if (!lobby) return { success: false };
-        const userId = session.user.id;
-        if (!lobby.players.some((p) => p.id === userId))
-          return { success: false };
-        if (!lobby.readyPlayers.includes(userId)) {
-          lobby.readyPlayers.push(userId);
-          broadcastToUsers(
-            lobby.players.map((p) => p.id),
-            "lobby:updated",
-            lobby
-          );
-        }
-        return { success: true };
-      },
-      "lobby:unready": ({ lobbyId }) => {
-        const lobby = lobbies.get(lobbyId);
-        if (!lobby) return { success: false };
-        const userId = session.user.id;
-        if (!lobby.players.some((p) => p.id === userId))
-          return { success: false };
-        if (lobby.readyPlayers.includes(userId)) {
-          lobby.readyPlayers = lobby.readyPlayers.filter((id) => id !== userId);
-          broadcastToUsers(
-            lobby.players.map((p) => p.id),
-            "lobby:updated",
-            lobby
-          );
-        }
-        return { success: true };
-      },
-      "lobby:transferOwner": ({ lobbyId, newOwnerId }) => {
-        const lobby = lobbies.get(lobbyId);
-        if (!lobby) return { success: false };
-        if (lobby.ownerId !== userId) return { success: false };
-        if (!lobby.players.some((p) => p.id === newOwnerId))
-          return { success: false };
-        lobby.ownerId = newOwnerId;
-        broadcastToUsers(
-          lobby.players.map((p) => p.id),
-          "lobby:updated",
-          lobby
-        );
-        app.log.info({ lobbyId, newOwnerId }, "Lobby owner transferred");
-        return { success: true };
-      },
-      "lobby:kick": ({ lobbyId, playerId }) => {
-        const lobby = lobbies.get(lobbyId);
-        if (!lobby) return { success: false };
-        if (lobby.ownerId !== userId) return { success: false };
-        if (playerId === userId) return { success: false };
-        if (!lobby.players.some((p) => p.id === playerId))
-          return { success: false };
-        lobby.players = lobby.players.filter((p) => p.id !== playerId);
-        lobby.readyPlayers = lobby.readyPlayers.filter((id) => id !== playerId);
-        lobby.disconnectedPlayerIds = (lobby.disconnectedPlayerIds ?? []).filter(
-          (id) => id !== playerId
-        );
-        if (lobby.players.length === 0) lobbies.delete(lobbyId);
-        else
-          broadcastToUsers(
-            lobby.players.map((p) => p.id),
-            "lobby:updated",
-            lobby
-          );
-        emitToUser(playerId, "lobby:kicked", { lobbyId });
-        app.log.info({ lobbyId, playerId }, "Player kicked from lobby");
-        return { success: true };
-      },
-      "lobby:start": ({ lobbyId }) => {
-        const lobby = lobbies.get(lobbyId);
-        if (!lobby) return { success: false };
-        const userId = session.user.id;
-        if (!lobby.players.some((p) => p.id === userId))
-          return { success: false };
-        const disconnected = lobby.disconnectedPlayerIds ?? [];
-        const connectedPlayers = lobby.players.filter(
-          (p) => !disconnected.includes(p.id)
-        );
-        if (connectedPlayers.length < lobby.requiredPlayers)
-          return { success: false };
-        const allConnectedReady = connectedPlayers.every((p) =>
-          lobby.readyPlayers.includes(p.id)
-        );
-        if (!allConnectedReady) return { success: false };
-        const gameId = crypto.randomUUID();
-        const game = {
-          id: gameId,
-          lobbyId,
-          playerOrder: lobby.players.map((p) => p.id),
-          currentTurnIndex: 0,
-          status: "playing" as const,
-        };
-        games.set(gameId, game);
-        lobbies.delete(lobbyId);
-        broadcastToUsers(game.playerOrder, "game:started", game);
-        app.log.info({ gameId, lobbyId }, "Game started");
-        return { success: true, gameId };
-      },
-      "game:turn": ({ gameId }) => {
-        const game = games.get(gameId);
-        if (!game || game.status !== "playing") return { success: false };
-        const currentPlayerId = game.playerOrder[game.currentTurnIndex];
-        if (currentPlayerId !== session.user.id) return { success: false };
-        const previousPlayerId = currentPlayerId;
-        game.currentTurnIndex =
-          (game.currentTurnIndex + 1) % game.playerOrder.length;
-        const finished =
-          game.currentTurnIndex === 0 && game.playerOrder.length > 0;
-        if (finished) game.status = "finished";
-        broadcastToUsers(game.playerOrder, "game:turn", {
-          game: { ...game },
-          previousPlayerId,
-        });
-        if (finished) broadcastToUsers(game.playerOrder, "game:ended", game);
-        return { success: true };
-      },
-    }
+    createWsHandlers(wsContext)
   );
 
   registerUser(session.user.id, router, session);
 
+  // Notify friends that this user is now online
+  const friendRows = await db
+    .select({ friendId: userFriend.friendId })
+    .from(userFriend)
+    .where(eq(userFriend.userId, userId));
+  for (const row of friendRows) {
+    emitToUser(row.friendId, "friend:online", { userId });
+  }
+
   // On connect: mark user as back in any lobbies they were disconnected from
-  for (const lobby of lobbies.values()) {
-    if (!lobby.disconnectedPlayerIds?.includes(userId)) continue;
-    lobby.disconnectedPlayerIds = lobby.disconnectedPlayerIds.filter(
+  const lobby = [...lobbies.values()].find((l) =>
+    l.disconnectedPlayerIds?.includes(userId)
+  );
+  if (lobby) {
+    lobby.disconnectedPlayerIds = lobby.disconnectedPlayerIds?.filter(
       (id) => id !== userId
     );
     broadcastToUsers(
@@ -337,7 +155,7 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
     app.log.info({ lobbyId: lobby.id, userId }, "Player reconnected to lobby");
   }
 
-  socket.on("close", () => {
+  socket.on("close", async () => {
     const disconnectingUserId = session.user.id;
     app.log.info(
       { userId: disconnectingUserId },
@@ -347,6 +165,16 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
     unregisterUser(disconnectingUserId, router);
 
     if (!hasConnections(disconnectingUserId)) {
+      const friendRows = await db
+        .select({ friendId: userFriend.friendId })
+        .from(userFriend)
+        .where(eq(userFriend.userId, disconnectingUserId));
+      for (const row of friendRows) {
+        emitToUser(row.friendId, "friend:offline", {
+          userId: disconnectingUserId,
+        });
+      }
+
       for (const lobby of lobbies.values()) {
         const inLobby = lobby.players.some((p) => p.id === disconnectingUserId);
         if (!inLobby) continue;

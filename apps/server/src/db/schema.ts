@@ -1,4 +1,9 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import {
+  sqliteTable,
+  text,
+  integer,
+  unique,
+} from "drizzle-orm/sqlite-core";
 
 /**
  * Better-auth core schema for SQLite.
@@ -57,7 +62,38 @@ export const verification = sqliteTable("verification", {
   updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
 });
 
+export const userFriend = sqliteTable(
+  "user_friend",
+  {
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    friendId: text("friendId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
+  },
+  (t) => [unique("user_friend_userId_friendId").on(t.userId, t.friendId)]
+);
+
+export const friendRequest = sqliteTable(
+  "friend_request",
+  {
+    requesterId: text("requesterId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    addresseeId: text("addresseeId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
+  },
+  (t) =>
+    [unique("friend_request_requester_addressee").on(t.requesterId, t.addresseeId)]
+);
+
 export type User = typeof user.$inferSelect;
 export type Session = typeof session.$inferSelect;
 export type Account = typeof account.$inferSelect;
 export type Verification = typeof verification.$inferSelect;
+export type UserFriend = typeof userFriend.$inferSelect;
+export type FriendRequest = typeof friendRequest.$inferSelect;
