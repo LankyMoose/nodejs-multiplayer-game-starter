@@ -9,6 +9,7 @@ const password = signal("")
 const displayName = signal("")
 const submitError = signal<string | null>(null)
 const isSubmitting = signal(false)
+const error = computed(() => submitError.value ?? auth.$error?.message ?? null)
 
 async function handleSubmit(e: Event, mode: FormMode) {
   e.preventDefault()
@@ -47,33 +48,6 @@ async function handleSubmit(e: Event, mode: FormMode) {
   window.location.href = "/"
 }
 
-const error = computed(() => submitError.value ?? auth.$error?.message ?? null)
-
-function FormModeButton({
-  active,
-  onclick,
-  children,
-}: {
-  active: boolean
-  onclick: () => void
-  children: JSX.Children
-}) {
-  return (
-    <button
-      type="button"
-      onclick={onclick}
-      className={
-        "flex-1 py-2 text-sm font-medium transition " +
-        (active
-          ? "bg-[var(--game-accent)] text-white"
-          : "text-[var(--game-text-dim)] hover:text-[var(--game-text)]")
-      }
-    >
-      {children}
-    </button>
-  )
-}
-
 export function AuthModal() {
   const [mode, setMode] = useState<FormMode>("signin")
 
@@ -86,10 +60,10 @@ export function AuthModal() {
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
       <div className="game-panel relative w-full max-w-sm p-6">
-        <h1 className="game-title text-xl tracking-wide text-[var(--game-text)] mb-6 text-center">
+        <h1 className="game-title text-xl tracking-wide text-(--game-text) mb-6 text-center">
           3UP1DOWN
         </h1>
-        <div className="mb-6 flex gap-1 bg-white/5 p-1 border border-[var(--game-surface-border)]">
+        <div className="mb-6 flex gap-1 bg-white/5 p-1 border border-(--game-surface-border)">
           <FormModeButton
             active={mode === "signin"}
             onclick={() => setMode("signin")}
@@ -112,7 +86,7 @@ export function AuthModal() {
             <div>
               <label
                 htmlFor="auth-display-name"
-                className="mb-1 block text-sm font-medium text-[var(--game-text)]"
+                className="mb-1 block text-sm font-medium text-(--game-text)"
               >
                 Display Name
               </label>
@@ -121,7 +95,7 @@ export function AuthModal() {
                 type="text"
                 autocomplete="display-name"
                 bind:value={displayName}
-                className="w-full border border-[var(--game-surface-border)] bg-white/5 px-3 py-2 text-[var(--game-text)] placeholder-[var(--game-text-dim)] focus:border-[var(--game-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--game-accent)]/30"
+                className="w-full border border-(--game-surface-border) bg-white/5 px-3 py-2 text-(--game-text) placeholder-(--game-text-dim) focus:border-(--game-accent) focus:outline-none focus:ring-2 focus:ring-(--game-accent)/30"
                 placeholder="Display Name"
                 required
                 disabled={isSubmitting}
@@ -131,7 +105,7 @@ export function AuthModal() {
           <div>
             <label
               htmlFor="auth-email"
-              className="mb-1 block text-sm font-medium text-[var(--game-text)]"
+              className="mb-1 block text-sm font-medium text-(--game-text)"
             >
               Email
             </label>
@@ -141,7 +115,7 @@ export function AuthModal() {
               autocomplete="email"
               required
               bind:value={email}
-              className="w-full border border-[var(--game-surface-border)] bg-white/5 px-3 py-2 text-[var(--game-text)] placeholder-[var(--game-text-dim)] focus:border-[var(--game-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--game-accent)]/30"
+              className="w-full border border-(--game-surface-border) bg-white/5 px-3 py-2 text-(--game-text) placeholder-(--game-text-dim) focus:border-(--game-accent) focus:outline-none focus:ring-2 focus:ring-(--game-accent)/30"
               placeholder="you@example.com"
               disabled={isSubmitting}
             />
@@ -149,7 +123,7 @@ export function AuthModal() {
           <div>
             <label
               htmlFor="auth-password"
-              className="mb-1 block text-sm font-medium text-[var(--game-text)]"
+              className="mb-1 block text-sm font-medium text-(--game-text)"
             >
               Password
             </label>
@@ -162,7 +136,7 @@ export function AuthModal() {
               required
               minLength={8}
               bind:value={password}
-              className="w-full border border-[var(--game-surface-border)] bg-white/5 px-3 py-2 text-[var(--game-text)] placeholder-[var(--game-text-dim)] focus:border-[var(--game-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--game-accent)]/30"
+              className="w-full border border-(--game-surface-border) bg-white/5 px-3 py-2 text-(--game-text) placeholder-(--game-text-dim) focus:border-(--game-accent) focus:outline-none focus:ring-2 focus:ring-(--game-accent)/30"
               placeholder={mode === "signup" ? "Min 8 characters" : "••••••••"}
               disabled={isSubmitting}
             />
@@ -171,7 +145,7 @@ export function AuthModal() {
           <Derive from={error}>
             {(error) =>
               error && (
-                <p className="bg-red-500/15 border-2 border-red-500/50 px-3 py-2 text-sm text-[var(--game-danger)]">
+                <p className="bg-red-500/15 border-2 border-red-500/50 px-3 py-2 text-sm text-(--game-danger)">
                   {error}
                 </p>
               )
@@ -192,5 +166,30 @@ export function AuthModal() {
         </form>
       </div>
     </div>
+  )
+}
+
+function FormModeButton({
+  active,
+  onclick,
+  children,
+}: {
+  active: boolean
+  onclick: () => void
+  children: JSX.Children
+}) {
+  return (
+    <button
+      type="button"
+      onclick={onclick}
+      className={
+        "flex-1 py-2 text-sm font-medium transition " +
+        (active
+          ? "bg-(--game-accent) text-white"
+          : "text-(--game-text-dim) hover:text-(--game-text)")
+      }
+    >
+      {children}
+    </button>
   )
 }

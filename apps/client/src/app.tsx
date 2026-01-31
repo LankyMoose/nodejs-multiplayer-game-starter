@@ -7,23 +7,16 @@ import { ws } from "./state/ws"
 import { game } from "./state/game"
 import { ToastsRoot } from "./features/toast"
 
-const displayMode = computed(() => {
-  if (auth.$isLoading) {
-    return "loading"
-  }
-  if (!auth.$user) {
-    return "auth"
-  }
-  if (ws.current?.$connectionState === "disconnected") {
-    return "disconnected"
-  }
-  if (
-    !ws.current ||
-    ws.current.$connectionState !== "connected" ||
-    !game.$ready
-  ) {
-    return "loading"
-  }
+type DisplayMode = "loading" | "auth" | "disconnected" | "connected"
+const displayMode = computed<DisplayMode>(() => {
+  if (auth.$isLoading) return "loading"
+  if (!auth.$user) return "auth"
+
+  const wsState = ws.current?.$connectionState
+
+  if (wsState === "disconnected") return "disconnected"
+  if (wsState !== "connected" || !game.$ready) return "loading"
+
   return "connected"
 })
 

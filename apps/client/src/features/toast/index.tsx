@@ -125,10 +125,10 @@ const ToastItem = memo(({ toast, state, index }: ToastItemProps) => {
     toast.type === "info"
       ? "border-l-[var(--game-accent)]"
       : toast.type === "success"
-        ? "border-l-[var(--game-success)]"
-        : toast.type === "danger"
-          ? "border-l-[var(--game-danger)]"
-          : "border-l-[var(--game-gold)]"
+      ? "border-l-[var(--game-success)]"
+      : toast.type === "danger"
+      ? "border-l-[var(--game-danger)]"
+      : "border-l-[var(--game-gold)]"
 
   return (
     <div
@@ -150,7 +150,7 @@ const ToastItem = memo(({ toast, state, index }: ToastItemProps) => {
         accentBorder
       )}
     >
-      <div className="text-sm text-[var(--game-text)] leading-snug">
+      <div className="text-sm text-(--game-text) leading-snug">
         <ToastItemContext.Provider
           value={{
             cancel: () => {
@@ -175,10 +175,10 @@ function ToastProgress({ toast }: { toast: Toast }) {
       toast.type === "info"
         ? "var(--game-accent)"
         : toast.type === "success"
-          ? "var(--game-success)"
-          : toast.type === "danger"
-            ? "var(--game-danger)"
-            : "var(--game-gold)"
+        ? "var(--game-success)"
+        : toast.type === "danger"
+        ? "var(--game-danger)"
+        : "var(--game-gold)"
     return { width: `${pct}%`, backgroundColor: color }
   })
 
@@ -190,10 +190,7 @@ function ToastProgress({ toast }: { toast: Toast }) {
       aria-valuemin={0}
       aria-valuemax={toast.duration}
     >
-      <div
-        className="h-full transition-[width] duration-150"
-        style={styles}
-      />
+      <div className="h-full transition-[width] duration-150" style={styles} />
     </div>
   )
 }
