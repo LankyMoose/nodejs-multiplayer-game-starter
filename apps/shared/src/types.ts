@@ -7,6 +7,7 @@ export type WebSocketContract = Contract<{
     "user:disconnect": string;
     "match:started": string;
     "lobby:updated": GameLobby;
+    "lobby:kicked": { lobbyId: string };
     "game:started": GameInstance;
     "game:turn": { game: GameInstance; previousPlayerId: string };
     "game:ended": GameInstance;
@@ -14,6 +15,9 @@ export type WebSocketContract = Contract<{
   rpc: {
     ping: { res: "pong" };
     "match:join": { req: { id: string }; res: { success: boolean } };
+    "session:state": {
+      res: { lobby: GameLobby | null; game: GameInstance | null };
+    };
     "lobby:create": { res: { lobbyId: string } };
     "lobby:join": {
       req: { lobbyId: string };
@@ -23,6 +27,15 @@ export type WebSocketContract = Contract<{
     };
     "lobby:leave": { req: { lobbyId: string }; res: { success: boolean } };
     "lobby:ready": { req: { lobbyId: string }; res: { success: boolean } };
+    "lobby:unready": { req: { lobbyId: string }; res: { success: boolean } };
+    "lobby:transferOwner": {
+      req: { lobbyId: string; newOwnerId: string };
+      res: { success: boolean };
+    };
+    "lobby:kick": {
+      req: { lobbyId: string; playerId: string };
+      res: { success: boolean };
+    };
     "lobby:start": {
       req: { lobbyId: string };
       res: { success: boolean; gameId?: string };

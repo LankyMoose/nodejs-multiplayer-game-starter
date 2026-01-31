@@ -34,6 +34,8 @@ export type WebSocketConnectionState =
 
 interface WebSocketConnection {
   $connectionState: WebSocketConnectionState
+  /** True when game router has applied initial session state. */
+  $readyState: boolean
   dispose: () => void
   router: ClientRouter<WebSocketContract>
   socket: WebSocket
@@ -80,6 +82,10 @@ export function createWebSocket(): WebSocketConnection {
     router,
     get $connectionState() {
       return state.value
+    },
+    /** True when connection is up and game router has applied initial session state. */
+    get $readyState() {
+      return game.$ready
     },
     dispose: () => {
       game.bindRouter(null)

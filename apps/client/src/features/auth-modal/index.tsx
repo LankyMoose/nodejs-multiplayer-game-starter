@@ -1,4 +1,4 @@
-import { computed, Derive, signal, StyleObject, useState } from "kiru"
+import { computed, Derive, signal, useState } from "kiru"
 import { validateDisplayName } from "shared"
 import { auth } from "@/state/auth"
 
@@ -25,25 +25,26 @@ async function handleSubmit(e: Event, mode: FormMode) {
       email: email.value,
       password: password.value,
       name: displayName.value.trim() || "User",
-      callbackURL: "/",
     })
     if (error) {
       const msg = (error as { message?: string }).message
       submitError.value = msg ? String(msg) : "Sign up failed"
+      isSubmitting.value = false
       return
     }
   } else {
     const { error } = await auth.client.signIn.email({
       email: email.value,
       password: password.value,
-      callbackURL: "/",
     })
     if (error) {
       const msg = (error as { message?: string }).message
       submitError.value = msg ? String(msg) : "Sign in failed"
+      isSubmitting.value = false
       return
     }
   }
+  window.location.href = "/"
 }
 
 const error = computed(() => submitError.value ?? auth.$error?.message ?? null)
@@ -73,22 +74,17 @@ function FormModeButton({
   )
 }
 
-const formStyles = computed<StyleObject>(() => {
-  return {
-    opacity: isSubmitting.value ? 0.5 : 1,
-    transition: "0.2s ease-in-out",
-  }
-})
-
 export function AuthModal() {
   const [mode, setMode] = useState<FormMode>("signin")
 
   return (
     <div
-      style={formStyles}
+      style={{
+        opacity: isSubmitting.value ? 0.5 : 1,
+        transition: "0.2s ease-in-out",
+      }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div className="relative w-full max-w-sm rounded-2xl border border-gray-700/80 bg-gray-900/95 p-6 shadow-xl shadow-purple-950/20">
         <div className="mb-6 flex gap-2 rounded-lg bg-gray-800/80 p-1">
           <FormModeButton

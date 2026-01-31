@@ -8,10 +8,12 @@ export function LobbyViewScreen({
   lobby: GameLobby
   userId: string
 }) {
+  const disconnected = lobby.disconnectedPlayerIds ?? []
+  const connectedPlayers = lobby.players.filter((p) => !disconnected.includes(p.id))
   const isReady = lobby.readyPlayers.includes(userId)
   const allReady =
-    lobby.players.length >= lobby.requiredPlayers &&
-    lobby.players.every((p) => lobby.readyPlayers.includes(p.id))
+    connectedPlayers.length >= lobby.requiredPlayers &&
+    connectedPlayers.every((p) => lobby.readyPlayers.includes(p.id))
 
   return (
     <div className="flex flex-col gap-4 border border-gray-600 rounded-lg p-4">
@@ -30,29 +32,57 @@ export function LobbyViewScreen({
       </p>
       <ul className="flex flex-col gap-1">
         {lobby.players.map((p) => (
-          <li key={p.id} className="text-sm flex items-center gap-2">
+          <li
+            key={p.id}
+            className="text-sm flex items-center gap-2 flex-wrap"
+          >
             <span className={p.id === userId ? "text-purple-300" : ""}>
               {p.name}
               {p.id === userId ? " (you)" : ""}
             </span>
+            {lobby.ownerId === p.id && (
+              <span className="text-amber-400 text-xs">owner</span>
+            )}
+            {disconnected.includes(p.id) && (
+              <span className="text-gray-500 text-xs">disconnected</span>
+            )}
             {lobby.readyPlayers.includes(p.id) && (
               <span className="text-green-400 text-xs">ready</span>
+            )}
+            {lobby.ownerId === userId && p.id !== userId && (
+              <>
+                <button
+                  type="button"
+                  onclick={() => game.transferLobbyOwner(lobby.id, p.id)}
+                  className="text-xs text-gray-400 hover:text-primary underline"
+                >
+                  Make owner
+                </button>
+                <button
+                  type="button"
+                  onclick={() => game.kickFromLobby(lobby.id, p.id)}
+                  className="text-xs text-red-400 hover:text-red-300 underline"
+                >
+                  Kick
+                </button>
+              </>
             )}
           </li>
         ))}
       </ul>
       <p className="text-xs text-gray-500">
-        {lobby.players.length} / {lobby.maxPlayers} · need{" "}
+        {connectedPlayers.length} / {lobby.players.length} connected · need{" "}
         {lobby.requiredPlayers} to start
       </p>
       <div className="flex gap-2">
         <button
           type="button"
-          disabled={isReady}
-          onclick={() => game.readyLobby(lobby.id)}
-          className="px-4 py-2 rounded-md bg-green-700 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm"
+          onclick={() =>
+            isReady ? game.unreadyLobby(lobby.id) : game.readyLobby(lobby.id)
+          }
+          className="px-4 py-2 rounded-md bg-green-700 hover:bg-green-600 text-white text-sm"
         >
-          Ready
+          {isReady ? "Unready" : "Ready"}
         </button>
         {allReady && (
           <button

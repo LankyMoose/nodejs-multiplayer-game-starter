@@ -1,37 +1,40 @@
-import { Transition } from "kiru"
+import { computed } from "kiru"
 import { auth } from "@/state/auth"
 import { AuthModal } from "@/features/auth-modal"
 import { ConnectedView } from "@/screens/connected"
+import { DisconnectedScreen } from "@/screens/Disconnected"
 import { ws } from "./state/ws"
+import { game } from "./state/game"
+
+const displayMode = computed(() => {
+  if (auth.$isLoading) {
+    return "loading"
+  }
+  if (!auth.$user) {
+    return "auth"
+  }
+  if (ws.current?.$connectionState === "disconnected") {
+    return "disconnected"
+  }
+  if (
+    !ws.current ||
+    ws.current.$connectionState !== "connected" ||
+    !game.$ready
+  ) {
+    return "loading"
+  }
+  return "connected"
+})
 
 export default function App() {
-  return (
-    <Transition
-      in={auth.$isLoading}
-      duration={{
-        in: 0,
-        out: 150,
-      }}
-      initialState="entered"
-      element={(state) => {
-        if (
-          state !== "exited" ||
-          (ws.current && ws.current.$connectionState !== "connected")
-        ) {
-          const opacity = state === "entered" ? 1 : 0
-          return <Loader opacity={opacity} />
-        }
-
-        if (auth.$user) {
-          return <ConnectedView userId={auth.$user.id} />
-        }
-
-        return <AuthModal />
-      }}
-    />
-  )
+  switch (displayMode.value) {
+    case "loading":
+      return <div className="loader" />
+    case "auth":
+      return <AuthModal />
+    case "disconnected":
+      return <DisconnectedScreen />
+    case "connected":
+      return <ConnectedView userId={auth.$user!.id} />
+  }
 }
-
-const Loader = ({ opacity }: { opacity: number }) => (
-  <div className="loader" style={{ opacity, transitionDuration: "150ms" }} />
-)
