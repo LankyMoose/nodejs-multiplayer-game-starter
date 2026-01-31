@@ -22,6 +22,7 @@ import {
   broadcastToUsers,
   emitToUser,
   getUserLobby,
+  getFriendStatus,
 } from "./game/store.js";
 import { GAME_LOBBY_LIMITS } from "./game/config.js";
 import { db } from "./db/index.js";
@@ -116,6 +117,20 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
 
   app.log.info({ url: req.url, userId }, "WebSocket client connected");
 
+  const emitFriendStatusToFriends = async (targetUserId: string) => {
+    const status = getFriendStatus(targetUserId);
+    const rows = await db
+      .select({ friendId: userFriend.friendId })
+      .from(userFriend)
+      .where(eq(userFriend.userId, targetUserId));
+    for (const row of rows) {
+      emitToUser(row.friendId, "friend:status", {
+        userId: targetUserId,
+        status,
+      });
+    }
+  };
+
   const wsContext: WsContext = {
     userId,
     session,
@@ -126,6 +141,8 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
     broadcastToUsers,
     emitToUser,
     hasConnections,
+    getFriendStatus,
+    emitFriendStatusToFriends,
     db,
     schema: { user, userFriend, friendRequest },
     GAME_LOBBY_LIMITS,
@@ -139,13 +156,15 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
 
   registerUser(session.user.id, router, session);
 
-  // Notify friends that this user is now online
+  // Notify friends that this user is now online and their current status
   const friendRows = await db
     .select({ friendId: userFriend.friendId })
     .from(userFriend)
     .where(eq(userFriend.userId, userId));
+  const status = getFriendStatus(userId);
   for (const row of friendRows) {
     emitToUser(row.friendId, "friend:online", { userId });
+    emitToUser(row.friendId, "friend:status", { userId, status });
   }
 
   // On connect: mark user as back in any lobbies they were disconnected from

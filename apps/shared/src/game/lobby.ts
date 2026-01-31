@@ -1,5 +1,7 @@
 import type { Player } from "./player.js";
 
+export type LobbyVisibility = "private" | "open";
+
 export interface GameLobby {
   id: string;
   /** Player id of the lobby owner (can transfer, kick). */
@@ -11,4 +13,6 @@ export interface GameLobby {
   readyPlayers: Player["id"][];
   /** Player ids that are currently disconnected (can rejoin on refresh). */
   disconnectedPlayerIds: Player["id"][];
+  /** Whether friends can join without an invite. Default private. */
+  visibility: LobbyVisibility;
 }

@@ -7,11 +7,11 @@ export function createFriendsHandlers(ctx: WsContext) {
     userId,
     session,
     log,
-    lobbies,
     db,
     schema,
     emitToUser,
     hasConnections,
+    getFriendStatus,
   } = ctx;
   const { user, userFriend, friendRequest } = schema;
 
@@ -32,6 +32,7 @@ export function createFriendsHandlers(ctx: WsContext) {
           id: u.id,
           name: u.name,
           online: hasConnections(u.id),
+          status: getFriendStatus(u.id),
         })),
       };
     },
@@ -61,12 +62,12 @@ export function createFriendsHandlers(ctx: WsContext) {
     },
     "friend_requests:send": async ({ addresseeId }) => {
       if (addresseeId === userId) return { success: false };
-      const inSameLobby = [...lobbies.values()].some(
-        (lobby) =>
-          lobby.players.some((p) => p.id === userId) &&
-          lobby.players.some((p) => p.id === addresseeId),
-      );
-      if (!inSameLobby) return { success: false };
+      const [addressee] = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.id, addresseeId))
+        .limit(1);
+      if (!addressee) return { success: false };
       const [alreadyFriends] = await db
         .select()
         .from(userFriend)

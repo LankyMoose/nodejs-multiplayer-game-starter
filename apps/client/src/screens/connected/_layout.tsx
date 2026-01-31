@@ -3,6 +3,8 @@ import { auth } from "@/state/auth"
 import { game } from "@/state/game"
 import FriendsList from "@/features/friends/friends-list"
 import FriendRequests from "@/features/friends/friend-requests"
+import SendFriendRequest from "@/features/friends/send-friend-request"
+import LobbyInvites from "@/features/lobby/lobby-invites"
 
 export default function ConnectedLayout({
   children,
@@ -24,8 +26,10 @@ export default function ConnectedLayout({
       </header>
 
       <div className="flex flex-1 min-h-0 gap-4 flex-col lg:flex-row">
-        <aside className="flex flex-col gap-4 shrink-0 lg:w-56">
+        <aside className="flex flex-col gap-4 shrink-0 lg:w-56 overflow-y-auto">
+          <SendFriendRequest />
           <FriendsList />
+          {game.$lobbyInvites.length > 0 && <LobbyInvites />}
           {game.$friendRequests.length > 0 && <FriendRequests />}
         </aside>
 

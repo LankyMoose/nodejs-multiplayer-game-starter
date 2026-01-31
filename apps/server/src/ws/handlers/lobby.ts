@@ -1,5 +1,10 @@
-import type { GameLobby, ServerHandlers, WebSocketContract } from "shared";
-import { getUserLobby } from "../../game/store.js";
+import { and, eq } from "drizzle-orm";
+import type {
+  GameLobby,
+  ServerHandlers,
+  WebSocketContract,
+} from "shared";
+import { getUserLobby, lobbyInvites } from "../../game/store.js";
 import type { WsContext } from "../context.js";
 
 export function createLobbyHandlers(ctx: WsContext) {
@@ -11,6 +16,7 @@ export function createLobbyHandlers(ctx: WsContext) {
     lobbies,
     broadcastToUsers,
     emitToUser,
+    emitFriendStatusToFriends,
     GAME_LOBBY_LIMITS,
   } = ctx;
 
@@ -29,8 +35,10 @@ export function createLobbyHandlers(ctx: WsContext) {
         players: [socketPlayer],
         readyPlayers: [],
         disconnectedPlayerIds: [],
+        visibility: "private",
       });
       log.info({ lobbyId, userId: session.user.id }, "Lobby created");
+      void emitFriendStatusToFriends(userId);
       return { lobbyId };
     },
     "lobby:join": ({ lobbyId }) => {
@@ -62,12 +70,105 @@ export function createLobbyHandlers(ctx: WsContext) {
         return { success: false, lobby: null };
       }
       lobby.players.push(socketPlayer);
+      lobbyInvites.delete(userId);
       broadcastToUsers(
         lobby.players.map((p) => p.id),
         "lobby:updated",
         lobby,
       );
       log.info({ lobbyId, userId }, "Player joined lobby");
+      void emitFriendStatusToFriends(userId);
+      return { success: true, lobby };
+    },
+    "lobby:setVisibility": ({ lobbyId, visibility }) => {
+      const lobby = lobbies.get(lobbyId);
+      if (!lobby) return { success: false };
+      if (lobby.ownerId !== userId) return { success: false };
+      lobby.visibility = visibility;
+      broadcastToUsers(
+        lobby.players.map((p) => p.id),
+        "lobby:updated",
+        lobby,
+      );
+      void emitFriendStatusToFriends(userId);
+      return { success: true };
+    },
+    "lobby:sendChat": ({ lobbyId, text }) => {
+      const lobby = lobbies.get(lobbyId);
+      if (!lobby) return { success: false };
+      if (!lobby.players.some((p) => p.id === userId))
+        return { success: false };
+      const trimmed = String(text).slice(0, 500).trim();
+      if (!trimmed) return { success: true };
+      broadcastToUsers(
+        lobby.players.map((p) => p.id),
+        "lobby:chat",
+        {
+          lobbyId,
+          userId,
+          userName: session.user.name ?? "Player",
+          text: trimmed,
+        },
+      );
+      return { success: true };
+    },
+    "lobby:inviteFriend": async ({ lobbyId, friendId }) => {
+      const lobby = lobbies.get(lobbyId);
+      if (!lobby) return { success: false };
+      if (lobby.ownerId !== userId) return { success: false };
+      if (lobby.players.some((p) => p.id === friendId))
+        return { success: false };
+      if (lobby.players.length >= lobby.maxPlayers) return { success: false };
+      const { db, schema } = ctx;
+      const [row] = await db
+        .select()
+        .from(schema.userFriend)
+        .where(
+          and(
+            eq(schema.userFriend.userId, userId),
+            eq(schema.userFriend.friendId, friendId),
+          ),
+        )
+        .limit(1);
+      if (!row) return { success: false };
+      lobbyInvites.set(friendId, { lobbyId, inviterId: userId });
+      emitToUser(friendId, "lobby:invited", {
+        lobbyId,
+        inviterId: userId,
+        inviterName: session.user.name ?? "Someone",
+      });
+      log.info({ lobbyId, friendId }, "Lobby invite sent");
+      return { success: true };
+    },
+    "lobby:acceptInvite": async ({ lobbyId }) => {
+      const invite = lobbyInvites.get(userId);
+      if (!invite || invite.lobbyId !== lobbyId) {
+        return { success: false, lobby: null };
+      }
+      const playerLobby = getUserLobby(userId);
+      if (playerLobby) {
+        if (playerLobby.id !== lobbyId) return { success: false, lobby: null };
+        lobbyInvites.delete(userId);
+        return { success: true, lobby: playerLobby };
+      }
+      const lobby = lobbies.get(lobbyId);
+      if (!lobby) {
+        lobbyInvites.delete(userId);
+        return { success: false, lobby: null };
+      }
+      if (lobby.players.length >= lobby.maxPlayers) {
+        lobbyInvites.delete(userId);
+        return { success: false, lobby: null };
+      }
+      lobbyInvites.delete(userId);
+      lobby.players.push(socketPlayer);
+      broadcastToUsers(
+        lobby.players.map((p) => p.id),
+        "lobby:updated",
+        lobby,
+      );
+      log.info({ lobbyId, userId }, "Player joined lobby via invite");
+      void emitFriendStatusToFriends(userId);
       return { success: true, lobby };
     },
     "lobby:leave": ({ lobbyId }) => {
@@ -100,6 +201,7 @@ export function createLobbyHandlers(ctx: WsContext) {
           lobby,
         );
       }
+      void ctx.emitFriendStatusToFriends(leavingUserId);
       return { success: true };
     },
     "lobby:ready": ({ lobbyId }) => {
@@ -167,12 +269,14 @@ export function createLobbyHandlers(ctx: WsContext) {
           lobby,
         );
       emitToUser(playerId, "lobby:kicked", { lobbyId });
+      void ctx.emitFriendStatusToFriends(playerId);
       log.info({ lobbyId, playerId }, "Player kicked from lobby");
       return { success: true };
     },
     "lobby:start": ({ lobbyId }) => {
       const lobby = lobbies.get(lobbyId);
       if (!lobby) return { success: false };
+      if (lobby.ownerId !== userId) return { success: false };
       if (!lobby.players.some((p) => p.id === userId))
         return { success: false };
       const disconnected = lobby.disconnectedPlayerIds;
@@ -196,6 +300,9 @@ export function createLobbyHandlers(ctx: WsContext) {
       ctx.games.set(gameId, game);
       lobbies.delete(lobbyId);
       broadcastToUsers(game.playerOrder, "game:started", game);
+      for (const pid of game.playerOrder) {
+        void ctx.emitFriendStatusToFriends(pid);
+      }
       log.info({ gameId, lobbyId }, "Game started");
       return { success: true, gameId };
     },

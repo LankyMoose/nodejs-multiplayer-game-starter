@@ -20,7 +20,37 @@ export function createGameHandlers(ctx: WsContext) {
         game: { ...game },
         previousPlayerId,
       });
-      if (finished) broadcastToUsers(game.playerOrder, "game:ended", game);
+      if (finished) {
+        broadcastToUsers(game.playerOrder, "game:ended", game);
+        for (const pid of game.playerOrder) {
+          void ctx.emitFriendStatusToFriends(pid);
+        }
+      }
+      return { success: true };
+    },
+    "game:leave": ({ gameId }) => {
+      const game = games.get(gameId);
+      if (!game) return { success: false };
+      const idx = game.playerOrder.indexOf(userId);
+      if (idx === -1) return { success: false };
+
+      game.playerOrder = game.playerOrder.filter((id) => id !== userId);
+      if (game.playerOrder.length === 0) {
+        games.delete(gameId);
+        void ctx.emitFriendStatusToFriends(userId);
+        return { success: true };
+      }
+      if (idx < game.currentTurnIndex) {
+        game.currentTurnIndex = Math.max(
+          0,
+          game.currentTurnIndex - 1,
+        );
+      }
+      if (game.currentTurnIndex >= game.playerOrder.length) {
+        game.currentTurnIndex = 0;
+      }
+      broadcastToUsers(game.playerOrder, "game:updated", { ...game });
+      void ctx.emitFriendStatusToFriends(userId);
       return { success: true };
     },
   } satisfies Partial<ServerHandlers<WebSocketContract>>;

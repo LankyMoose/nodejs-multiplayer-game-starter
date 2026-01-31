@@ -1,4 +1,5 @@
 import type {
+  FriendStatus,
   GameInstance,
   GameLobby,
   ServerRouter,
@@ -7,6 +8,11 @@ import type {
 
 export const lobbies = new Map<string, GameLobby>();
 export const games = new Map<string, GameInstance>();
+/** Pending lobby invites: addresseeId -> { lobbyId, inviterId }. */
+export const lobbyInvites = new Map<
+  string,
+  { lobbyId: string; inviterId: string }
+>();
 const userConnections = new Map<
   string,
   Array<{
@@ -20,6 +26,28 @@ export function getUserLobby(userId: string): GameLobby | null {
     [...lobbies.values()].find((l) => l.players.some((p) => p.id === userId)) ??
     null
   );
+}
+
+export function getFriendStatus(userId: string): FriendStatus {
+  if (!hasConnections(userId)) return { kind: "offline" };
+  const userGame = [...games.values()].find((g) =>
+    g.playerOrder.includes(userId),
+  );
+  if (userGame) return { kind: "in_game" };
+  const userLobby = getUserLobby(userId);
+  if (userLobby) {
+    const connected = userLobby.players.filter(
+      (p) => !userLobby.disconnectedPlayerIds.includes(p.id),
+    );
+    return {
+      kind: "lobby",
+      lobbyId: userLobby.id,
+      playerCount: connected.length,
+      maxPlayers: userLobby.maxPlayers,
+      isOpen: userLobby.visibility === "open",
+    };
+  }
+  return { kind: "menu" };
 }
 
 export function registerUser(

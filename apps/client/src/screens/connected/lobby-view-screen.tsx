@@ -1,6 +1,10 @@
+import { signal } from "kiru"
 import { GameLobby } from "shared"
 import { game } from "@/state/game"
 import LobbyPlayers from "@/features/lobby/lobby-players"
+import LobbyChat from "@/features/lobby/lobby-chat"
+
+const chatInput = signal("")
 
 export default function LobbyViewScreen({
   lobby,
@@ -16,35 +20,75 @@ export default function LobbyViewScreen({
   const allReady =
     connectedPlayers.length >= lobby.requiredPlayers &&
     connectedPlayers.every((p) => lobby.readyPlayers.includes(p.id))
+  const isOwner = lobby.ownerId === userId
+  const visibility = lobby.visibility ?? "private"
 
   return (
-    <div className="game-panel p-5 flex flex-col gap-5">
-      <div className="flex items-center justify-between">
+    <div className="game-panel p-5 flex flex-col gap-5 min-h-0 flex-1">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="game-title text-lg tracking-wide text-(--game-text)">
           Lobby
         </h2>
-        <button
-          type="button"
-          onclick={() => game.leaveLobby(lobby.id)}
-          data-cancel="true"
-          className="btn-ghost text-sm"
-        >
-          Leave
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {isOwner && (
+            <button
+              type="button"
+              onclick={() =>
+                game.setLobbyVisibility(
+                  lobby.id,
+                  visibility === "open" ? "private" : "open"
+                )
+              }
+              className={
+                visibility === "open"
+                  ? "btn-ghost border border-(--game-success)/50 text-(--game-success) text-sm"
+                  : "btn-ghost text-sm text-(--game-text-dim)"
+              }
+              title={
+                visibility === "open"
+                  ? "Open for friends – click to set Private"
+                  : "Private – click to allow friends to join"
+              }
+            >
+              {visibility === "open" ? "Open" : "Private"}
+            </button>
+          )}
+          <button
+            type="button"
+            onclick={() => game.leaveLobby(lobby.id)}
+            data-cancel="true"
+            className="btn-ghost text-sm"
+          >
+            Leave
+          </button>
+        </div>
       </div>
 
-      <p className="text-xs font-mono text-(--game-text-dim) break-all bg-black/20 px-2 py-1.5 border border-(--game-surface-border)">
+      <p className="text-xs font-mono text-(--game-text-dim) break-all bg-black/20 px-2 py-1.5 border border-(--game-surface-border) shrink-0">
         {lobby.id}
       </p>
 
       <LobbyPlayers lobby={lobby} userId={userId} />
 
-      <p className="text-xs text-(--game-text-dim)">
+      <p className="text-xs text-(--game-text-dim) shrink-0">
         {connectedPlayers.length} / {lobby.players.length} connected · need{" "}
         {lobby.requiredPlayers} to start
       </p>
 
-      <div className="flex gap-3 flex-wrap">
+      <LobbyChat
+        lobbyId={lobby.id}
+        messages={game.$lobbyChatMessages.get(lobby.id) ?? []}
+        chatInput={chatInput}
+        onSend={() => {
+          const t = chatInput.value.trim()
+          if (t) {
+            game.sendLobbyChat(lobby.id, t)
+            chatInput.value = ""
+          }
+        }}
+      />
+
+      <div className="flex gap-3 flex-wrap shrink-0">
         <button
           type="button"
           onclick={() =>
@@ -59,7 +103,7 @@ export default function LobbyViewScreen({
         >
           {isReady ? "Unready" : "Ready"}
         </button>
-        {allReady && (
+        {allReady && isOwner && (
           <button
             type="button"
             onclick={() => game.startLobby(lobby.id)}

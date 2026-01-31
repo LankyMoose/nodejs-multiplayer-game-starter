@@ -20,6 +20,8 @@ export type WsContext = {
   broadcastToUsers: typeof broadcastToUsers;
   emitToUser: typeof emitToUser;
   hasConnections: typeof hasConnections;
+  getFriendStatus: (userId: string) => import("shared").FriendStatus;
+  emitFriendStatusToFriends: (userId: string) => Promise<void>;
   db: typeof db;
   schema: {
     user: typeof user;
