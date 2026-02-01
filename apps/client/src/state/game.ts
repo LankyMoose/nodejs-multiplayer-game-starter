@@ -9,6 +9,8 @@ import { signal } from "kiru"
 import { toast } from "@/features/toasts"
 
 const lobby = signal<GameLobby | null>(null)
+/** True only after router is bound and initial session:state has been applied. */
+const ready = signal(false)
 
 const gameInstance = signal<GameInstance | null>(null)
 const error = signal<string | null>(null)
@@ -33,14 +35,13 @@ const waitingForReconnect = signal<{
   disconnected: { playerId: string; playerName: string }[]
 } | null>(null)
 
-/** True only after router is bound and initial session:state has been applied. */
-const ready = signal(false)
-
 let currentRouter: ClientRouter<WebSocketContract> | null = null
 let unregister: (() => void) | null = null
 
 export function bindRouter(router: ClientRouter<WebSocketContract> | null) {
-  if (router === currentRouter) return
+  if (router === currentRouter) {
+    return
+  }
   unregister?.()
   currentRouter = null
   ready.value = false
@@ -219,6 +220,18 @@ const action = <T, Args extends any[]>(
     }
     return callback(currentRouter, ...args)
   }
+}
+
+export function resetGameState() {
+  lobby.value = null
+  gameInstance.value = null
+  ready.value = false
+  error.value = null
+  friends.value = []
+  friendRequests.value = []
+  pendingSentAddresseeIds.value = []
+  lobbyChatMessages.value = new Map()
+  lobbyInvites.value = []
 }
 
 export const game = {

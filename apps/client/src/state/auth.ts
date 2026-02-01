@@ -3,13 +3,10 @@ import { createAuthClient } from "better-auth/client"
 import type { Session, User } from "better-auth"
 import { withMinDuration } from "@/utils"
 import { env } from "@/env"
-
-window.__kiru.on("mount", (ctx) => ctx.name === "client" && updateAuthState())
-
-const protocol = import.meta.env.DEV ? "http" : "https"
+import { loaderText } from "./loader"
 
 const authClient = createAuthClient({
-  baseURL: `${protocol}://${env.HOST}${env.PORT}/api/auth`,
+  baseURL: `${env.HTTP_BASE_URL}/api/auth`,
 })
 
 type GetSessionError = {
@@ -22,6 +19,13 @@ const user = signal<User | null>(null)
 const session = signal<Session | null>(null)
 const isLoading = signal<boolean>(true)
 const error = signal<GetSessionError | null>(null)
+
+export function resetAuthState() {
+  user.value = null
+  session.value = null
+  isLoading.value = true
+  error.value = null
+}
 
 export const auth = {
   get $isLoading() {
@@ -40,8 +44,13 @@ export const auth = {
   _signals: { user, session, isLoading, error },
 }
 
-async function updateAuthState() {
+export async function updateAuthState() {
   isLoading.value = true
+  error.value = null
+  session.value = null
+  user.value = null
+  loaderText.value = "Checking credentials..."
+
   const { error: authError, data: authData } = await withMinDuration(500, () =>
     authClient.getSession()
   )

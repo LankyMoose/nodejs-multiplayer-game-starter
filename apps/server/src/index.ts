@@ -45,6 +45,8 @@ await app.register(cors, {
 
 await app.register(websocket);
 
+app.get("/health", async (_, reply) => reply.code(200).send());
+
 // Better-auth: catch-all for /api/auth/*
 app.route({
   method: ["GET", "POST"],
@@ -53,7 +55,6 @@ app.route({
     try {
       const req = fastifyRequestToRequest(request);
       const response = await auth.handler(req);
-      console.log("auth response", response);
       reply.status(response.status);
       response.headers.forEach((value, key) => reply.header(key, value));
       const body = response.body ? await response.text() : null;
@@ -91,13 +92,10 @@ const wsServerRouterOptions: ServerRouterOptions = {
 app.get("/ws", { websocket: true }, async (socket, req) => {
   let session: Awaited<ReturnType<typeof auth.api.getSession>>;
 
-  console.log("ws request", req.headers);
-
   try {
     session = await auth.api.getSession({
       headers: fastifyHeadersToHeaders(req.headers),
     });
-    console.log("ws session", session);
   } catch (err) {
     app.log.warn(err, "WebSocket auth: getSession failed");
     socket.close(WS_CLOSE_UNAUTHORIZED, "Authentication failed");
@@ -157,6 +155,10 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
   );
 
   registerUser(session.user.id, router, session);
+
+  // IMPORTANT: to prevent race conditions, the client must wait for the "init" message before attempting to send any other messages.
+  // This is so that we have a chance to perform session validation and flag the user as online.
+  socket.send("init");
 
   // Notify friends that this user is now online and their current status
   const friendRows = await db
@@ -288,10 +290,6 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
 
     router.dispose();
   });
-});
-
-app.get("/", async (_, reply) => {
-  reply.send({ ok: true, message: "hello world" });
 });
 
 const port = Number(process.env.PORT ?? 6969);

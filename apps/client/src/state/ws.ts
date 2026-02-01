@@ -1,18 +1,15 @@
-import {
-  ClientRouter,
-  WS_CLOSE_UNAUTHORIZED,
-  WebSocketContract,
-  createClientRouter,
-} from "shared"
-import { Signal, signal, watch } from "kiru"
+import { ClientRouter, WebSocketContract, createClientRouter } from "shared"
+import { signal, watch } from "kiru"
 import { env } from "@/env"
 import { auth } from "./auth"
 import { game } from "@/state/game"
+import { onDisconnected } from "./core"
 
 export const ws = {
   current: null as WebSocketConnection | null,
 }
 
+let epoch = 0
 watch(() => {
   ws.current?.dispose()
 
@@ -20,17 +17,16 @@ watch(() => {
     loading = auth.$isLoading
 
   if (loading || !user) return
-
-  ws.current = createWebSocket()
+  const e = ++epoch
+  createWebSocket().then((socket) => {
+    if (e !== epoch) return
+    ws.current = socket
+  })
 })
 
 /** Close code sent by server when the client is not authenticated */
 
-export type WebSocketConnectionState =
-  | "connecting"
-  | "connected"
-  | "disconnected"
-  | "unauthorized"
+export type WebSocketConnectionState = "connecting" | "connected"
 
 interface WebSocketConnection {
   $connectionState: WebSocketConnectionState
@@ -41,11 +37,23 @@ interface WebSocketConnection {
   socket: WebSocket
 }
 
-export function createWebSocket(): WebSocketConnection {
-  const state = signal<WebSocketConnectionState>("connecting")
-  const socket = new WebSocket(
-    `${import.meta.env.DEV ? "ws" : "wss"}://${env.HOST}${env.PORT}/ws`
-  )
+const state = signal<WebSocketConnectionState>("connecting")
+
+export async function createWebSocket(): Promise<WebSocketConnection> {
+  const socket = new WebSocket(`${env.WS_BASE_URL}/ws`)
+  state.value = "connecting"
+
+  // wait for server "init" message
+
+  await new Promise((resolve) => {
+    const onMessage = (e: MessageEvent) => {
+      if (e.data === "init") {
+        socket.removeEventListener("message", onMessage)
+        resolve(null)
+      }
+    }
+    socket.addEventListener("message", onMessage)
+  })
 
   const router = createClientRouter<WebSocketContract>({
     send(msg) {
@@ -63,23 +71,26 @@ export function createWebSocket(): WebSocketConnection {
     },
   })
 
-  socket.addEventListener("open", () => {
-    state.value = "connected"
-    game.bindRouter(router)
-  })
-  socket.addEventListener("close", (event) => {
-    state.value =
-      event.code === WS_CLOSE_UNAUTHORIZED ? "unauthorized" : "disconnected"
-    game.bindRouter(null)
-  })
+  state.value = "connected"
+  game.bindRouter(router)
+
   socket.addEventListener("error", () => {
-    state.value = "disconnected"
     game.bindRouter(null)
+    onDisconnected()
+  })
+
+  socket.addEventListener("close", () => {
+    game.bindRouter(null)
+    onDisconnected()
   })
 
   return {
-    socket,
-    router,
+    get socket() {
+      return socket
+    },
+    get router() {
+      return router
+    },
     get $connectionState() {
       return state.value
     },
@@ -91,7 +102,7 @@ export function createWebSocket(): WebSocketConnection {
       game.bindRouter(null)
       socket.close()
       router.dispose()
-      Signal.dispose(state)
+      state.value = "connecting"
     },
   }
 }
