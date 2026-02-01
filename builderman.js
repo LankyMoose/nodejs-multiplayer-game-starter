@@ -3,19 +3,17 @@ import { pnpm } from "@builderman/resolvers-pnpm";
 
 const args = process.argv.slice(2);
 
-const buildCommand = {
-  run: "pnpm build",
-  cache: {
-    inputs: ["src", pnpm.package()],
-    outputs: ["dist"],
-  },
-};
-
 const shared = task({
   name: "shared",
   cwd: "apps/shared",
   commands: {
-    build: buildCommand,
+    build: {
+      run: "pnpm build",
+      cache: {
+        inputs: ["src", pnpm.package()],
+        outputs: ["dist"],
+      },
+    },
     dev: {
       run: "pnpm dev",
       readyWhen: (output) => output.includes("Watching for file changes."),
@@ -27,7 +25,18 @@ const server = task({
   name: "server",
   cwd: "apps/server",
   commands: {
-    build: buildCommand,
+    build: {
+      run: "pnpm build",
+      cache: {
+        inputs: [
+          "src",
+          "drizzle.config.ts",
+          pnpm.package(),
+          shared.artifact("build"),
+        ],
+        outputs: ["dist"],
+      },
+    },
     dev: {
       run: "pnpm dev",
       readyWhen: (output) => output.includes("Server listening on"),
@@ -40,17 +49,30 @@ const client = task({
   name: "client",
   cwd: "apps/client",
   commands: {
-    dev: "pnpm dev",
     build: {
       run: "pnpm build",
       cache: {
-        inputs: [".", pnpm.package()],
+        inputs: [
+          "public",
+          "src",
+          "index.html",
+          "postcss.config.js",
+          "vite.config.ts",
+          pnpm.package(),
+          shared.artifact("build"),
+        ],
         outputs: ["dist"],
       },
     },
-    preview: "pnpm preview",
+    dev: {
+      run: "pnpm dev",
+      dependencies: [server],
+    },
+    preview: {
+      run: "pnpm preview",
+      dependencies: [server],
+    },
   },
-  dependencies: [shared, server],
 });
 
 const result = await pipeline([client, server, shared]).run({
