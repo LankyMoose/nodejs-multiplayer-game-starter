@@ -80,5 +80,68 @@ export function createGameHandlers(ctx: WsContext) {
       removePlayerFromGame(game, idx, userId);
       return { success: true };
     },
+    "game:tictactoe:move": ({ gameId, cellIndex }) => {
+      const game = games.get(gameId);
+      if (!game || game.status !== "playing") return { success: false };
+      
+      const currentPlayerId = game.playerOrder[game.currentTurnIndex];
+      if (currentPlayerId !== session.user.id) return { success: false };
+      
+      if (cellIndex < 0 || cellIndex > 8 || game.state.board[cellIndex] !== null) {
+        return { success: false };
+      }
+
+      // 1. Update board
+      game.state.board[cellIndex] = currentPlayerId;
+
+      // 2. Check win
+      const board = game.state.board;
+      const wins: [number, number, number][] = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // cols
+        [0, 4, 8], [2, 4, 6]             // diags
+      ];
+      let won = false;
+      for (const [a, b, c] of wins) {
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+          won = true;
+          break;
+        }
+      }
+
+      if (won) {
+        game.state.winner = currentPlayerId;
+        game.status = "finished";
+      } else if (board.every(cell => cell !== null)) {
+        game.state.isDraw = true;
+        game.status = "finished";
+      } else {
+        // Next turn
+        game.currentTurnIndex = (game.currentTurnIndex + 1) % game.playerOrder.length;
+      }
+
+      const previousPlayerId = currentPlayerId;
+
+      // Broadcast move update
+      broadcastToUsers(game.playerOrder, "game:tictactoe:move", {
+        gameId: game.id,
+        previousPlayerId,
+        state: game.state,
+      });
+
+      if (game.status === "finished") {
+        broadcastToUsers(game.playerOrder, "game:ended", game);
+        returnLobbyFromGame(game);
+      } else {
+         // Also broadcast generic turn so generic UI (if any) updates?
+         // Use generic game:turn for turn update
+         broadcastToUsers(game.playerOrder, "game:turn", {
+            game: { ...game },
+            previousPlayerId,
+         });
+      }
+
+      return { success: true };
+    },
   } satisfies Partial<ServerHandlers<WebSocketContract>>;
 }

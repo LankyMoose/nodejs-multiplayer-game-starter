@@ -1,5 +1,5 @@
 import type { Contract } from "./ws/contract.js";
-import type { GameInstance } from "./game/instance.js";
+import type { GameInstance, TicTacToeState } from "./game/instance.js";
 import type { GameLobby, LobbyVisibility } from "./game/lobby.js";
 
 /** Friend status for display. */
@@ -60,6 +60,11 @@ export type WebSocketContract = Contract<{
     "game:turn": { game: GameInstance; previousPlayerId: string };
     "game:ended": GameInstance;
     "game:updated": GameInstance;
+    "game:tictactoe:move": {
+        gameId: string;
+        previousPlayerId: string;
+        state: TicTacToeState;
+    };
     /** Disconnected player reconnected; update overlay. */
     "game:playerReconnected": { gameId: string; playerId: string };
     /** List of players we're waiting to reconnect (empty = none). */
@@ -127,6 +132,10 @@ export type WebSocketContract = Contract<{
     "game:leave": {
       req: { gameId: string };
       res: { success: boolean };
+    };
+    "game:tictactoe:move": {
+        req: { gameId: string; cellIndex: number };
+        res: { success: boolean };
     };
     "friends:list": {
       res: {

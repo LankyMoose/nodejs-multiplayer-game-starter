@@ -72,6 +72,14 @@ export function bindRouter(router: ClientRouter<WebSocketContract> | null) {
     router.on("game:turn", (payload) => {
       gameInstance.value = payload.game
     }),
+    router.on("game:tictactoe:move", (payload) => {
+        if (gameInstance.value && gameInstance.value.id === payload.gameId) {
+             gameInstance.value = {
+                 ...gameInstance.value,
+                 state: payload.state
+             }
+        }
+    }),
     router.on("game:ended", (payload) => {
       gameInstance.value = payload
       if (waitingForReconnect.value?.gameId === payload.id)
@@ -449,6 +457,14 @@ export const game = {
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed"
     }
+  }),
+  makeTicTacToeMove: action(async (router, gameId: string, cellIndex: number) => {
+      try {
+          const res = await router.send("game:tictactoe:move", { gameId, cellIndex });
+          if (!res.success) error.value = "Invalid move";
+      } catch (e) {
+          error.value = e instanceof Error ? e.message : "Failed move";
+      }
   }),
   leaveGame: action(async (router) => {
     const gameId = gameInstance.value?.id

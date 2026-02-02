@@ -360,6 +360,11 @@ export function createLobbyHandlers(ctx: WsContext) {
         playerOrder: lobby.players.map((p) => p.id),
         currentTurnIndex: 0,
         status: "playing",
+        state: {
+          board: Array(9).fill(null),
+          winner: null,
+          isDraw: false,
+        },
       };
       ctx.games.set(gameId, game);
       lobby.inGameId = gameId;

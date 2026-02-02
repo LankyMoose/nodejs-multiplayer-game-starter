@@ -2,6 +2,8 @@ import { signal } from "kiru"
 import type { GameInstance } from "shared"
 import { game } from "@/state/game"
 import LobbyChat from "@/features/lobby/lobby-chat"
+import { TicTacToeBoard } from "@/features/tictactoe/TicTacToeBoard"
+import { Confetti } from "@/features/tictactoe/Confetti"
 
 type Props = {
   gameInstance: GameInstance
@@ -24,6 +26,7 @@ export default function GameScreen({ gameInstance, userId }: Props) {
 
   return (
     <div className="game-panel p-5 flex flex-col gap-5 relative min-h-0 flex-1">
+      <Confetti active={gameInstance.status === "finished" && gameInstance.state.winner === userId} />
       {showWaitingOverlay && (
         <div
           className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded bg-(--game-bg)/95 p-6"
@@ -67,8 +70,10 @@ export default function GameScreen({ gameInstance, userId }: Props) {
         {gameInstance.id}
       </p>
 
-      {gameInstance.status === "playing" ? (
-        <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
+        <TicTacToeBoard gameInstance={gameInstance} userId={userId} />
+
+        {gameInstance.status === "playing" && (
           <p className="text-sm">
             {isMyTurn ? (
               <span className="badge badge-success text-base py-1.5 px-3">
@@ -80,7 +85,9 @@ export default function GameScreen({ gameInstance, userId }: Props) {
               </span>
             )}
           </p>
-          {isMyTurn && (
+        )}
+        
+        {isMyTurn && gameInstance.status === "playing" && (
             <button
               type="button"
               onclick={() => game.takeTurn(gameInstance.id)}
@@ -88,11 +95,8 @@ export default function GameScreen({ gameInstance, userId }: Props) {
             >
               Take turn
             </button>
-          )}
-        </div>
-      ) : (
-        <p className="text-sm text-(--game-text-dim)">Game finished.</p>
-      )}
+        )}
+      </div>
 
       {showLobbyChat && (
         <div className="flex flex-col gap-2 min-h-0 shrink mt-2 border-t border-(--game-surface-border) pt-4">
