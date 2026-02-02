@@ -1,16 +1,18 @@
 import { game } from "@/state/game"
-import ConnectedLayout from "./_layout"
+import AuthenticatedLayout from "./_layout"
 import GameScreen from "./game-screen"
 import LobbyViewScreen from "./lobby-view-screen"
 import LobbySetupScreen from "./lobby-setup-screen"
 
-interface ConnectedSwitchProps {
+interface AuthenticatedScreenSwitchProps {
   userId: string
 }
 
-export default function ConnectedScreen({ userId }: ConnectedSwitchProps) {
+export default function AuthenticatedScreenSwitch({
+  userId,
+}: AuthenticatedScreenSwitchProps) {
   return (
-    <ConnectedLayout>
+    <AuthenticatedLayout>
       {game.$instance ? (
         <GameScreen gameInstance={game.$instance} userId={userId} />
       ) : game.$lobby ? (
@@ -18,6 +20,6 @@ export default function ConnectedScreen({ userId }: ConnectedSwitchProps) {
       ) : (
         <LobbySetupScreen />
       )}
-    </ConnectedLayout>
+    </AuthenticatedLayout>
   )
 }

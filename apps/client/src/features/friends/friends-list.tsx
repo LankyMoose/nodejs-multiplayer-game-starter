@@ -51,7 +51,7 @@ export default function FriendsList() {
           return (
             <li
               key={f.id}
-              className="flex flex-col gap-1 py-2 px-3 bg-white/5 border border-(--game-surface-border) rounded text-sm"
+              className="game-inner-panel py-2 px-3 rounded text-sm"
             >
               <div className="flex items-center gap-2 flex-wrap">
                 <span

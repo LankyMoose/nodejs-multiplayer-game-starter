@@ -104,6 +104,17 @@ select {
   box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
 }
 
+.game-inner-panel {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--game-surface-border);
+  color: var(--game-text);
+  font-family: var(--font-pixel);
+  outline: none;
+}
+
+
 .game-title {
   font-family: var(--font-pixel);
   font-weight: normal;
@@ -214,4 +225,16 @@ select {
   to {
     transform: rotate(1turn);
   }
+}
+
+:popover-open {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  transform: translate(calc(50vw - 50%), calc(50vh - 50%));
+}
+
+:popover-open::backdrop {
+  background: rgba(0, 0, 0, 0.5);
 }

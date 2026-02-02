@@ -1,6 +1,14 @@
-import { computed, Derive, signal, useState } from "kiru"
+import {
+  computed,
+  Derive,
+  signal,
+  StyleObject,
+  useComputed,
+  useState,
+} from "kiru"
 import { validateDisplayName } from "shared"
 import { auth } from "@/state/auth"
+import { env } from "../env"
 
 type FormMode = "signin" | "signup"
 
@@ -11,20 +19,29 @@ const submitError = signal<string | null>(null)
 const isSubmitting = signal(false)
 const error = computed(() => submitError.value ?? auth.$error?.message ?? null)
 
-export default function AuthModal() {
+const containerStyle = computed<StyleObject>(() => ({
+  opacity: isSubmitting.value ? 0.5 : 1,
+  transition: "0.2s ease-in-out",
+}))
+
+export default function AuthScreen() {
   const [mode, setMode] = useState<FormMode>("signin")
+  const submitButtonText = useComputed(() => {
+    return isSubmitting.value
+      ? "Please wait…"
+      : mode === "signin"
+        ? "Sign in"
+        : "Create account"
+  }, [mode])
 
   return (
     <div
-      style={{
-        opacity: isSubmitting.value ? 0.5 : 1,
-        transition: "0.2s ease-in-out",
-      }}
+      style={containerStyle}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
       <div className="game-panel relative w-full max-w-sm p-6">
         <h1 className="game-title text-xl tracking-wide text-(--game-text) mb-6 text-center">
-          3UP1DOWN
+          {env.APP_NAME}
         </h1>
         <div className="mb-6 flex gap-1 bg-white/5 p-1 border border-(--game-surface-border)">
           <FormModeButton
@@ -120,11 +137,7 @@ export default function AuthModal() {
             disabled={isSubmitting}
             className="btn-primary w-full mt-1 disabled:opacity-50"
           >
-            {isSubmitting.value
-              ? "Please wait…"
-              : mode === "signin"
-                ? "Sign in"
-                : "Create account"}
+            {submitButtonText}
           </button>
         </form>
       </div>
@@ -163,7 +176,8 @@ async function handleSubmit(e: Event, mode: FormMode) {
   isSubmitting.value = true
 
   if (mode === "signup") {
-    const displayNameError = validateDisplayName(displayName.value.trim())
+    const name = displayName.value.trim()
+    const displayNameError = validateDisplayName(name)
     if (displayNameError) {
       submitError.value = displayNameError
       return
@@ -171,7 +185,7 @@ async function handleSubmit(e: Event, mode: FormMode) {
     const { error } = await auth.client.signUp.email({
       email: email.value,
       password: password.value,
-      name: displayName.value.trim() || "User",
+      name,
     })
     if (error) {
       const msg = (error as { message?: string }).message

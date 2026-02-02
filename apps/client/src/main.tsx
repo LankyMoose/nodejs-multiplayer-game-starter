@@ -9,7 +9,7 @@ mount(<App />, document.getElementById("app")!, { name: "client" })
 document.body.addEventListener(
   "click",
   (e) => {
-    if (!(e.target instanceof HTMLElement)) return
+    if (!(e.target instanceof Element)) return
     const btn = e.target.closest("button")
     if (!btn) return
 

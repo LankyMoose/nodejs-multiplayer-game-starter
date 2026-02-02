@@ -1,5 +1,6 @@
 import { signal } from "kiru"
 import { game } from "@/state/game"
+import Input from "@/components/input"
 
 const friendIdInput = signal("")
 
@@ -10,15 +11,7 @@ export default function SendFriendRequest() {
         Add friend by ID
       </h3>
       <div className="flex gap-2 flex-wrap">
-        <input
-          type="text"
-          placeholder="User ID"
-          className="flex-1 min-w-0 px-3 py-2 bg-white/5 border-2 border-(--game-surface-border) text-(--game-text) placeholder-(--game-text-dim) text-sm font-mono focus:outline-none focus:border-(--game-accent)"
-          value={friendIdInput.value}
-          oninput={(e) => {
-            friendIdInput.value = (e.target as HTMLInputElement).value.trim()
-          }}
-        />
+        <Input type="text" placeholder="User ID" bind:value={friendIdInput} />
         <button
           type="button"
           disabled={!friendIdInput.value}

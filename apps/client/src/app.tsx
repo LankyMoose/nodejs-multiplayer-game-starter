@@ -4,8 +4,8 @@ import { game } from "@/state/game"
 import { loaderText } from "@/state/loader"
 import { init } from "@/state/core"
 import ToastsRoot from "@/features/toasts"
-import AuthModal from "@/features/auth-modal"
-import ConnectedScreen from "@/screens/connected"
+import AuthScreen from "@/screens/auth-screen"
+import AuthenticatedScreenSwitch from "@/screens/authenticated"
 
 window.__kiru.on("mount", (ctx) => ctx.name == "client" && init())
 
@@ -26,11 +26,11 @@ function ScreenSwitch() {
 
   console.log("ScreenSwitch", { authLoading, user, wsState, gameReady, game })
   if (authLoading) return <Loader />
-  if (!user) return <AuthModal />
+  if (!user) return <AuthScreen />
 
   if (wsState !== "connected" || !gameReady) return <Loader />
 
-  return <ConnectedScreen userId={user.id} />
+  return <AuthenticatedScreenSwitch userId={user.id} />
 }
 
 const Loader = () => (

@@ -1,6 +1,7 @@
 import { signal } from "kiru"
 import { game } from "@/state/game"
 import { ws } from "@/state/ws"
+import Input from "@/components/input"
 
 const joinId = signal("")
 
@@ -22,14 +23,10 @@ export default function LobbySetupScreen() {
         </button>
 
         <div className="flex gap-2 items-stretch flex-col sm:flex-row">
-          <input
+          <Input
             type="text"
             placeholder="Paste lobby ID to join"
-            className="flex-1 px-4 py-2.5 bg-white/5 border-2 border-(--game-surface-border) text-(--game-text) placeholder-(--game-text-dim) text-sm focus:outline-none focus:border-(--game-accent)"
-            value={joinId.value}
-            oninput={(e) => {
-              joinId.value = (e.target as HTMLInputElement).value.trim()
-            }}
+            bind:value={joinId}
           />
           <button
             type="button"
