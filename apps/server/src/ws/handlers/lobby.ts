@@ -102,8 +102,7 @@ export function createLobbyHandlers(ctx: WsContext) {
     },
     "lobby:setVisibility": ({ lobbyId, visibility }) => {
       const lobby = lobbies.get(lobbyId);
-      if (!lobby) return { success: false };
-      if (lobby.ownerId !== userId) return { success: false };
+      if (lobby?.ownerId !== userId) return { success: false };
       lobby.visibility = visibility;
       broadcastToUsers(
         lobby.players.map((p) => p.id),
@@ -115,8 +114,7 @@ export function createLobbyHandlers(ctx: WsContext) {
     },
     "lobby:sendChat": ({ lobbyId, text }) => {
       const lobby = lobbies.get(lobbyId);
-      if (!lobby) return { success: false };
-      if (!lobby.players.some((p) => p.id === userId))
+      if (!lobby || !lobby.players.some((p) => p.id === userId))
         return { success: false };
       const trimmed = String(text).slice(0, 500).trim();
       if (!trimmed) return { success: true };
@@ -135,23 +133,21 @@ export function createLobbyHandlers(ctx: WsContext) {
     },
     "lobby:inviteFriend": async ({ lobbyId, friendId }) => {
       const lobby = lobbies.get(lobbyId);
-      if (!lobby) return { success: false };
-      if (lobby.ownerId !== userId) return { success: false };
-      if (lobby.players.some((p) => p.id === friendId))
+      if (
+        lobby?.ownerId !== userId ||
+        lobby.players.some((p) => p.id === friendId) ||
+        lobby.players.length >= lobby.maxPlayers ||
+        lobby.invitedUsers?.some((u) => u.id === friendId)
+      )
         return { success: false };
-      if (lobby.players.length >= lobby.maxPlayers) return { success: false };
-      const invited = lobby.invitedUsers ?? [];
-      if (invited.some((u) => u.id === friendId)) return { success: false };
+
       const { db, schema } = ctx;
       const { user, userFriend } = schema;
       const [row] = await db
         .select()
         .from(userFriend)
         .where(
-          and(
-            eq(userFriend.userId, userId),
-            eq(userFriend.friendId, friendId),
-          ),
+          and(eq(userFriend.userId, userId), eq(userFriend.friendId, friendId)),
         )
         .limit(1);
       if (!row) return { success: false };
@@ -179,10 +175,12 @@ export function createLobbyHandlers(ctx: WsContext) {
     },
     "lobby:cancelInvite": ({ lobbyId, userId: targetUserId }) => {
       const lobby = lobbies.get(lobbyId);
-      if (!lobby) return { success: false };
-      if (lobby.ownerId !== userId) return { success: false };
-      if (!lobby.invitedUsers?.some((u) => u.id === targetUserId))
+      if (
+        lobby?.ownerId !== userId ||
+        !lobby.invitedUsers?.some((u) => u.id === targetUserId)
+      )
         return { success: false };
+
       lobby.invitedUsers = lobby.invitedUsers.filter(
         (u) => u.id !== targetUserId,
       );
@@ -198,9 +196,10 @@ export function createLobbyHandlers(ctx: WsContext) {
     },
     "lobby:acceptInvite": async ({ lobbyId }) => {
       const invite = lobbyInvites.get(userId);
-      if (!invite || invite.lobbyId !== lobbyId) {
+      if (invite?.lobbyId !== lobbyId) {
         return { success: false, lobby: null };
       }
+
       const playerLobby = getUserLobby(userId);
       if (playerLobby) {
         if (playerLobby.id !== lobbyId) return { success: false, lobby: null };
@@ -281,9 +280,9 @@ export function createLobbyHandlers(ctx: WsContext) {
     },
     "lobby:unready": ({ lobbyId }) => {
       const lobby = lobbies.get(lobbyId);
-      if (!lobby) return { success: false };
-      if (!lobby.players.some((p) => p.id === userId))
+      if (!lobby || !lobby.players.some((p) => p.id === userId))
         return { success: false };
+
       if (lobby.readyPlayers.includes(userId)) {
         lobby.readyPlayers = lobby.readyPlayers.filter((id) => id !== userId);
         broadcastToUsers(
@@ -296,10 +295,12 @@ export function createLobbyHandlers(ctx: WsContext) {
     },
     "lobby:transferOwner": ({ lobbyId, newOwnerId }) => {
       const lobby = lobbies.get(lobbyId);
-      if (!lobby) return { success: false };
-      if (lobby.ownerId !== userId) return { success: false };
-      if (!lobby.players.some((p) => p.id === newOwnerId))
+      if (
+        lobby?.ownerId !== userId ||
+        !lobby.players.some((p) => p.id === newOwnerId)
+      )
         return { success: false };
+
       lobby.ownerId = newOwnerId;
       broadcastToUsers(
         lobby.players.map((p) => p.id),
@@ -311,25 +312,24 @@ export function createLobbyHandlers(ctx: WsContext) {
     },
     "lobby:kick": ({ lobbyId, playerId }) => {
       const lobby = lobbies.get(lobbyId);
-      if (!lobby) return { success: false };
-      if (lobby.ownerId !== userId) return { success: false };
-      if (playerId === userId) return { success: false };
-      if (!lobby.players.some((p) => p.id === playerId))
+      if (
+        lobby?.ownerId !== userId ||
+        playerId === userId ||
+        !lobby.players.some((p) => p.id === playerId)
+      )
         return { success: false };
+
       lobby.players = lobby.players.filter((p) => p.id !== playerId);
       lobby.readyPlayers = lobby.readyPlayers.filter((id) => id !== playerId);
       lobby.disconnectedPlayerIds = lobby.disconnectedPlayerIds.filter(
         (id) => id !== playerId,
       );
-      if (lobby.players.length === 0) {
-        lobbies.delete(lobbyId);
-        clearLobbyChat(lobbyId);
-      } else
-        broadcastToUsers(
-          lobby.players.map((p) => p.id),
-          "lobby:updated",
-          lobby,
-        );
+      broadcastToUsers(
+        lobby.players.map((p) => p.id),
+        "lobby:updated",
+        lobby,
+      );
+
       emitToUser(playerId, "lobby:kicked", { lobbyId });
       void ctx.emitFriendStatusToFriends(playerId);
       log.info({ lobbyId, playerId }, "Player kicked from lobby");
@@ -337,10 +337,12 @@ export function createLobbyHandlers(ctx: WsContext) {
     },
     "lobby:start": ({ lobbyId }) => {
       const lobby = lobbies.get(lobbyId);
-      if (!lobby) return { success: false };
-      if (lobby.ownerId !== userId) return { success: false };
-      if (!lobby.players.some((p) => p.id === userId))
+      if (
+        lobby?.ownerId !== userId ||
+        !lobby.players.some((p) => p.id === userId)
+      )
         return { success: false };
+
       const disconnected = lobby.disconnectedPlayerIds;
       const connectedPlayers = lobby.players.filter(
         (p) => !disconnected.includes(p.id),
