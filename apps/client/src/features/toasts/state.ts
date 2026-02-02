@@ -31,6 +31,7 @@ setInterval(() => {
     if (t.remaining.value <= 0) {
       didExpire = true
       t.expired = true
+      Signal.dispose(t.remaining)
     }
   }
   if (didExpire) {

@@ -1,11 +1,11 @@
 import { auth } from "@/state/auth"
 import { ws } from "@/state/ws"
 import { game } from "@/state/game"
+import { loaderText } from "@/state/loader"
+import { init } from "@/state/core"
 import ToastsRoot from "@/features/toasts"
 import AuthModal from "@/features/auth-modal"
 import ConnectedScreen from "@/screens/connected"
-import { loaderText } from "./state/loader"
-import { init } from "./state/core"
 
 window.__kiru.on("mount", (ctx) => ctx.name == "client" && init())
 

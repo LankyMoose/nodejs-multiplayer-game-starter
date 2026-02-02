@@ -4,6 +4,8 @@ import {
   useRef,
   useMemo,
   useLayoutEffect,
+  useEffect,
+  Signal,
   useComputed,
 } from "kiru"
 import { className as cls } from "kiru/utils"
@@ -43,12 +45,12 @@ export default memo(function ToastItem({
 
   const accentBorder =
     toast.type === "info"
-      ? "border-l-[var(--game-accent)]"
+      ? "border-l-(--game-accent)"
       : toast.type === "success"
-        ? "border-l-[var(--game-success)]"
+        ? "border-l-(--game-success)"
         : toast.type === "danger"
-          ? "border-l-[var(--game-danger)]"
-          : "border-l-[var(--game-gold)]"
+          ? "border-l-(--game-danger)"
+          : "border-l-(--game-gold)"
 
   return (
     <div
@@ -75,6 +77,7 @@ export default memo(function ToastItem({
           value={{
             cancel: () => {
               toast.expired = true
+              Signal.dispose(toast.remaining)
               toasts.notify()
             },
           }}
@@ -88,29 +91,45 @@ export default memo(function ToastItem({
 })
 
 function ToastProgress({ toast }: { toast: Toast }) {
-  const styles = useComputed(() => {
-    const remaining = toast.remaining.value
-    const pct = Math.max(0, 100 - (remaining / toast.duration) * 100)
-    const color =
-      toast.type === "info"
-        ? "var(--game-accent)"
-        : toast.type === "success"
-          ? "var(--game-success)"
-          : toast.type === "danger"
-            ? "var(--game-danger)"
-            : "var(--game-gold)"
-    return { width: `${pct}%`, backgroundColor: color }
+  const divRef = useRef<HTMLDivElement>(null)
+  useEffect(
+    () =>
+      toast.remaining.subscribe((remaining) => {
+        const pct = Math.max(0, 100 - (remaining / toast.duration) * 100)
+        divRef.current!.style.transform = `scaleX(${pct / 100})`
+      }),
+    []
+  )
+
+  const ariaValueNow = useComputed(() => {
+    return toast.duration - toast.remaining.value
   })
 
   return (
     <div
       className="absolute left-0 right-0 bottom-0 h-0.5 overflow-hidden bg-white/10"
       role="progressbar"
-      aria-valuenow={toast.duration - toast.remaining.value}
+      aria-valuenow={ariaValueNow}
       aria-valuemin={0}
       aria-valuemax={toast.duration}
     >
-      <div className="h-full transition-[width] duration-150" style={styles} />
+      <div
+        ref={divRef}
+        className={cls(
+          "h-full origin-left will-change-transform w-full",
+          toast.type === "info" && "bg-(--game-accent)",
+          toast.type === "success" && "bg-(--game-success)",
+          toast.type === "danger" && "bg-(--game-danger)",
+          toast.type === "warning" && "bg-(--game-gold)"
+        )}
+      />
     </div>
   )
 }
+
+// toast({ type: "info", children: () => <div className="min-w-sm">Hello</div> })
+
+// setInterval(() => {
+//   toast({ type: "info", children: () => <div className="min-w-sm">Hello</div> })
+//   console.clear()
+// }, 4500)
