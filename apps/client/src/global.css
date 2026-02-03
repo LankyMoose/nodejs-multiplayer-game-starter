@@ -1,10 +1,9 @@
 @import "tailwindcss";
 
 @font-face {
-  font-family: "m6x11";
+  font-family: "VT323";
   src:
-    url("/fonts/m6x11plus-webfont.woff2") format("woff2"),
-    url("/fonts/m6x11plus-webfont.woff") format("woff");
+    url("/fonts/VT323/VT323-Regular.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -36,7 +35,7 @@
   --game-muted: #6b7280;
   --game-text: #e5e7eb;
   --game-text-dim: #9ca3af;
-  --font-pixel: "m6x11", "Courier New", monospace;
+  --font-pixel: "VT323", "Courier New", monospace;
   color-scheme: dark;
   min-height: 100vh;
   background-color: var(--game-bg);
