@@ -1,9 +1,10 @@
-import { signal } from "kiru"
-import { game } from "@/state/game"
-import { ws } from "@/state/ws"
-import Input from "@/components/input"
+import { signal } from "kiru";
+import { game } from "@/state/game";
+import { spaceGame } from "@/state/space-game";
+import { ws } from "@/state/ws";
+import Input from "@/components/input";
 
-const joinId = signal("")
+const joinId = signal("");
 
 export default function LobbySetupScreen() {
   return (
@@ -20,6 +21,15 @@ export default function LobbySetupScreen() {
           className="btn-primary w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Create lobby
+        </button>
+
+        <button
+          type="button"
+          disabled={ws.current?.$connectionState !== "connected"}
+          onclick={spaceGame.createInstance}
+          className="btn-success w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          🚀 Enter Space Game
         </button>
 
         <div className="flex gap-2 items-stretch flex-col sm:flex-row">
@@ -41,5 +51,5 @@ export default function LobbySetupScreen() {
         </div>
       </div>
     </div>
-  )
+  );
 }

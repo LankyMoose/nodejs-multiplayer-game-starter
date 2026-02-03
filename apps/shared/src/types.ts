@@ -67,6 +67,33 @@ export type WebSocketContract = Contract<{
       gameId: string;
       disconnected: { playerId: string; playerName: string }[];
     };
+    /** Space game: full game state update */
+    "space:gameState": {
+      instanceId: string;
+      tick: number;
+      ships: Array<{
+        id: string;
+        playerId: string;
+        playerName: string;
+        position: { x: number; y: number };
+        velocity: { x: number; y: number };
+        rotation: number;
+        health: number;
+        maxHealth: number;
+        isThrusting: boolean;
+      }>;
+    };
+    /** Space game: player joined instance */
+    "space:playerJoined": {
+      instanceId: string;
+      playerId: string;
+      playerName: string;
+    };
+    /** Space game: player left instance */
+    "space:playerLeft": {
+      instanceId: string;
+      playerId: string;
+    };
   };
   rpc: {
     "session:state": {
@@ -158,6 +185,35 @@ export type WebSocketContract = Contract<{
     };
     "friend_requests:decline": {
       req: { requesterId: string };
+      res: { success: boolean };
+    };
+    /** Space game: create new instance for player */
+    "space:createInstance": {
+      res: { success: boolean; instanceId?: string };
+    };
+    /** Space game: send player input */
+    "space:sendInput": {
+      req: {
+        instanceId: string;
+        input: {
+          thrust: boolean;
+          rotateLeft: boolean;
+          rotateRight: boolean;
+          brake: boolean;
+          sequenceNumber: number;
+          timestamp: number;
+        };
+      };
+      res: { success: boolean };
+    };
+    /** Space game: warp to friend's instance */
+    "space:warpToFriend": {
+      req: { friendId: string };
+      res: { success: boolean; instanceId?: string };
+    };
+    /** Space game: leave current instance */
+    "space:leaveInstance": {
+      req: { instanceId: string };
       res: { success: boolean };
     };
   };

@@ -237,3 +237,202 @@ select {
 :popover-open::backdrop {
   background: rgba(0, 0, 0, 0.5);
 }
+
+/* ============================================================================
+   Space Game Styles
+   ============================================================================ */
+
+.space-game-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+}
+
+.space-game-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.space-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  font-family: 'Courier New', monospace;
+}
+
+.hud-panel {
+  pointer-events: auto;
+  background: rgba(10, 10, 20, 0.85);
+  border: 2px solid rgba(100, 100, 150, 0.5);
+  padding: 1rem;
+  color: #fff;
+  backdrop-filter: blur(4px);
+}
+
+/* Stats Panel */
+.hud-stats {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  min-width: 200px;
+}
+
+.hud-stat {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 14px;
+}
+
+.hud-label {
+  color: #aaa;
+}
+
+.hud-value {
+  color: #4a9eff;
+  font-weight: bold;
+}
+
+/* Friends Panel */
+.hud-friends {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  min-width: 220px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.hud-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 16px;
+  color: #4a9eff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.hud-friends-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hud-empty {
+  color: #666;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.hud-friend {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(100, 100, 150, 0.3);
+}
+
+.hud-friend-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.hud-friend-name {
+  font-size: 14px;
+  color: #fff;
+}
+
+.hud-friend-status {
+  font-size: 11px;
+  color: #888;
+}
+
+.hud-friend-status.in_game {
+  color: #4ade80;
+}
+
+.hud-friend-status.lobby {
+  color: #fbbf24;
+}
+
+.hud-friend-status.menu {
+  color: #60a5fa;
+}
+
+.hud-warp-btn {
+  padding: 0.25rem 0.75rem;
+  background: #4a9eff;
+  color: #fff;
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.hud-warp-btn:hover {
+  background: #6bb3ff;
+}
+
+/* Controls Panel */
+.hud-controls {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  min-width: 200px;
+}
+
+.hud-controls-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hud-control {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.hud-key {
+  color: #4a9eff;
+  font-weight: bold;
+  font-family: monospace;
+}
+
+.hud-action {
+  color: #aaa;
+}
+
+/* Exit Button */
+.hud-exit-btn {
+  pointer-events: auto;
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(239, 68, 68, 0.9);
+  color: #fff;
+  border: 2px solid rgba(239, 68, 68, 1);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.hud-exit-btn:hover {
+  background: rgba(239, 68, 68, 1);
+  transform: scale(1.05);
+}
