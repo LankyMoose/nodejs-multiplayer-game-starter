@@ -9,6 +9,7 @@
     "dev": "tsx watch --env-file=.env src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx --env-file=.env src/db/seed.ts",
     "db:studio": "drizzle-kit studio",
     "auth:generate": "npx @better-auth/cli@latest generate --config src/auth.ts"
   },

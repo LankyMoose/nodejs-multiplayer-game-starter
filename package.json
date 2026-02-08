@@ -3,7 +3,10 @@
   "type": "module",
   "scripts": {
     "dev": "node builderman.js dev",
-    "build": "node builderman.js build"
+    "build": "node builderman.js build",
+    "db:generate": "pnpm --filter server db:generate",
+    "db:migrate": "pnpm --filter server db:migrate",
+    "db:seed": "pnpm --filter server db:seed"
   },
   "packageManager": "pnpm@10.28.0",
   "dependencies": {
