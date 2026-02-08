@@ -19,11 +19,10 @@ export default function GameScreen({ gameInstance, userId }: Props) {
     waiting &&
     waiting.gameId === gameInstance.id &&
     waiting.disconnected.length > 0
-  const showLobbyChat =
-    game.$lobby?.id === gameInstance.lobbyId
+  const showLobbyChat = game.$lobby?.id === gameInstance.lobbyId
 
   return (
-    <div className="game-panel p-5 flex flex-col gap-5 relative min-h-0 flex-1">
+    <div className="game-panel p-5 flex flex-col gap-5 relative min-h-0">
       {showWaitingOverlay && (
         <div
           className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded bg-(--game-bg)/95 p-6"

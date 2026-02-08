@@ -14,8 +14,8 @@ export default function AuthenticatedLayout({
   children,
 }: AuthenticatedLayoutProps) {
   return (
-    <div className="flex flex-col w-full max-w-4xl min-h-0 gap-4">
-      <header className="flex items-center justify-between shrink-0 px-1">
+    <>
+      <header className="flex items-center justify-between px-1 w-full">
         <h1 className="game-title text-xl tracking-wide">{env.APP_NAME}</h1>
         <div className="flex gap-2">
           <Settings />
@@ -30,15 +30,15 @@ export default function AuthenticatedLayout({
         </div>
       </header>
 
-      <div className="flex flex-1 min-h-0 gap-4 flex-col lg:flex-row">
-        <aside className="flex flex-col gap-4 shrink-0 lg:w-56 overflow-y-auto">
+      <main className="flex grow gap-4 flex-col lg:flex-row w-full">
+        <aside className="flex flex-col gap-4 lg:w-sm overflow-y-auto">
           <SendFriendRequest />
           <FriendsList />
           {game.$lobbyInvites.length > 0 && <LobbyInvites />}
           {game.$friendRequests.length > 0 && <FriendRequests />}
         </aside>
 
-        <main className="flex flex-col flex-1 min-w-0">
+        <div className="flex flex-col flex-1 min-w-0">
           {game.$error && (
             <div
               className="flex items-center justify-between gap-2 px-4 py-2 bg-red-500/15 border-2 border-red-500/50 text-red-400 text-sm mb-4"
@@ -56,8 +56,8 @@ export default function AuthenticatedLayout({
             </div>
           )}
           {children}
-        </main>
-      </div>
-    </div>
+        </div>
+      </main>
+    </>
   )
 }

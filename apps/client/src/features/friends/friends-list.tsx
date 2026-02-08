@@ -1,6 +1,6 @@
 import { game } from "@/state/game"
 import { auth } from "@/state/auth"
-import type { FriendStatus } from "shared"
+import type { Friend, FriendStatus } from "shared"
 
 function friendStatusLabel(status: FriendStatus): string {
   switch (status.kind) {
@@ -36,7 +36,7 @@ export default function FriendsList() {
             f.status.isOpen &&
             f.status.playerCount < f.status.maxPlayers &&
             !inLobby
-          const isAlreadyInvited = (currentLobby?.invitedUsers ?? []).some(
+          const isInvitedToLobby = (currentLobby?.invitedUsers ?? []).some(
             (u) => u.id === f.id
           )
           const canInviteToLobby =
@@ -44,80 +44,87 @@ export default function FriendsList() {
             isOwner &&
             currentLobby &&
             !currentLobby.players.some((p) => p.id === f.id) &&
-            !isAlreadyInvited &&
+            !isInvitedToLobby &&
             currentLobby.players.length < currentLobby.maxPlayers &&
             f.status.kind === "menu"
 
           return (
-            <li
-              key={f.id}
-              className="game-inner-panel py-2 px-3 rounded text-sm"
-            >
-              <div className="flex items-center gap-2 flex-wrap">
-                <span
-                  className="inline-block w-2 h-2 shrink-0 rounded-full"
-                  style={{
-                    backgroundColor:
-                      f.status.kind === "offline"
-                        ? "var(--game-muted)"
-                        : "var(--game-success)",
-                  }}
-                  title={friendStatusLabel(f.status)}
-                  aria-hidden
-                />
-                <span className="text-(--game-text) font-medium truncate flex-1 min-w-0">
-                  {f.name}
-                </span>
-                <span className="text-xs text-(--game-text-dim) shrink-0">
-                  {friendStatusLabel(f.status)}
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-1">
-                {canJoinOpenLobby &&
-                  f.status.kind === "lobby" &&
-                  (() => {
-                    const lobbyId = f.status.lobbyId
-                    return (
-                      <button
-                        type="button"
-                        onclick={() => game.joinLobby(lobbyId)}
-                        className="btn-ghost text-xs text-(--game-success) hover:bg-(--game-success)/15 border border-(--game-success)/50"
-                      >
-                        Join
-                      </button>
-                    )
-                  })()}
-                {canInviteToLobby && (
-                  <button
-                    type="button"
-                    onclick={() =>
-                      currentLobby &&
-                      game.inviteFriendToLobby(currentLobby.id, f.id)
-                    }
-                    className="btn-ghost text-xs text-(--game-accent) hover:bg-(--game-accent)/15"
-                  >
-                    Invite to lobby
-                  </button>
-                )}
-                {isAlreadyInvited && (
-                  <span className="text-xs text-(--game-text-dim) italic">
-                    Invited
-                  </span>
-                )}
+            <FriendsListItem key={f.id} friend={f}>
+              {canJoinOpenLobby && f.status.kind === "lobby" && (
                 <button
                   type="button"
-                  onclick={() => game.removeFriend(f.id)}
-                  data-cancel="true"
-                  className="btn-ghost text-xs py-0.5 px-1.5 text-(--game-muted) hover:text-(--game-danger)"
-                  title="Remove friend"
+                  onclick={() => {
+                    // @ts-expect-error we validate this on the server so it doesn't really matter if we have invalid state here
+                    game.joinLobby(f.status.lobbyId)
+                  }}
+                  className="btn-ghost text-xs text-(--game-success) hover:bg-(--game-success)/15 border border-(--game-success)/50"
                 >
-                  Remove
+                  Join
                 </button>
-              </div>
-            </li>
+              )}
+              {canInviteToLobby && (
+                <button
+                  type="button"
+                  onclick={() =>
+                    currentLobby &&
+                    game.inviteFriendToLobby(currentLobby.id, f.id)
+                  }
+                  className="btn-ghost text-xs text-(--game-accent) hover:bg-(--game-accent)/15"
+                >
+                  Invite to lobby
+                </button>
+              )}
+              {isInvitedToLobby && (
+                <span className="text-xs text-(--game-text-dim) italic">
+                  Invited
+                </span>
+              )}
+            </FriendsListItem>
           )
         })}
       </ul>
     </section>
+  )
+}
+
+interface FriendsListItemProps {
+  children: JSX.Children
+  friend: Friend
+}
+function FriendsListItem({ friend: f, children }: FriendsListItemProps) {
+  return (
+    <li className="game-inner-panel py-2 px-3 rounded text-sm">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span
+          className="inline-block w-2 h-2 shrink-0 rounded-full"
+          style={{
+            backgroundColor:
+              f.status.kind === "offline"
+                ? "var(--game-muted)"
+                : "var(--game-success)",
+          }}
+          title={friendStatusLabel(f.status)}
+          aria-hidden
+        />
+        <span className="text-(--game-text) font-medium truncate flex-1 min-w-0">
+          {f.name}
+        </span>
+        <span className="text-xs text-(--game-text-dim) shrink-0">
+          {friendStatusLabel(f.status)}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-1">
+        {children}
+        <button
+          type="button"
+          onclick={() => game.removeFriend(f.id)}
+          data-cancel="true"
+          className="btn-ghost text-xs py-0.5 px-1.5 text-(--game-muted) hover:text-(--game-danger)"
+          title="Remove friend"
+        >
+          Remove
+        </button>
+      </div>
+    </li>
   )
 }

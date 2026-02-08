@@ -24,7 +24,7 @@ export default function LobbyViewScreen({
   const visibility = lobby.visibility ?? "private"
 
   return (
-    <div className="game-panel p-5 flex flex-col gap-5 min-h-0 flex-1">
+    <div className="game-panel p-5 flex flex-col gap-5 min-h-0">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="game-title text-lg tracking-wide text-(--game-text)">
           Lobby

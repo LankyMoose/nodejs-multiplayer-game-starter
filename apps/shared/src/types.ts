@@ -25,6 +25,19 @@ export interface LobbySuccessResult {
   }>;
 }
 
+export interface ChatMessage {
+  userId: string;
+  userName: string;
+  text: string;
+}
+
+export interface Friend {
+  id: string;
+  name: string;
+  online: boolean;
+  status: FriendStatus;
+}
+
 export type WebSocketContract = Contract<{
   serverEvents: {
     "user:disconnect": string;
@@ -73,11 +86,7 @@ export type WebSocketContract = Contract<{
       res: {
         lobby: GameLobby | null;
         game: GameInstance | null;
-        lobbyChatMessages: Array<{
-          userId: string;
-          userName: string;
-          text: string;
-        }>;
+        lobbyChatMessages: ChatMessage[];
       };
     };
     "lobby:create": { res: { lobbyId: string } };
@@ -130,12 +139,7 @@ export type WebSocketContract = Contract<{
     };
     "friends:list": {
       res: {
-        friends: {
-          id: string;
-          name: string;
-          online: boolean;
-          status: FriendStatus;
-        }[];
+        friends: Friend[];
       };
     };
     "friends:remove": {
