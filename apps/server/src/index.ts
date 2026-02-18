@@ -1,6 +1,8 @@
+import path from "node:path";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
+import fastifyStatic from "@fastify/static";
 import { auth } from "./auth.js";
 import type { WebSocket } from "ws";
 import {
@@ -30,10 +32,20 @@ import { GAME_LOBBY_LIMITS } from "./game/config.js";
 import { db } from "./db/index.js";
 import { user, userFriend, friendRequest } from "./db/schema.js";
 import { eq } from "drizzle-orm";
+import { env } from "./env.js";
 import { createWsHandlers } from "./ws/handlers/index.js";
 import type { WsContext } from "./ws/context.js";
 
 const app = Fastify({ logger: true });
+
+if (env.IS_PRODUCTION) {
+  const __dirname = path.resolve(path.dirname(""));
+  const clientDir = path.resolve(__dirname, "../client/dist");
+  await app.register(fastifyStatic, {
+    root: clientDir,
+  });
+  console.log(`Static files to be served from ${clientDir}`);
+}
 
 await app.register(cors, {
   origin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173",
@@ -292,8 +304,8 @@ app.get("/ws", { websocket: true }, async (socket, req) => {
   });
 });
 
-const port = Number(process.env.PORT ?? 6969);
-const host = process.env.HOST ?? "0.0.0.0";
+const port = Number(env.PORT ?? 6969);
+const host = env.HOST ?? "0.0.0.0";
 
 try {
   await app.listen({ port, host });

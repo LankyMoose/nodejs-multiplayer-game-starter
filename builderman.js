@@ -1,7 +1,27 @@
-import { task, pipeline } from "builderman";
+import { task, pipeline, createInputResolver } from "builderman";
 import { pnpm } from "@builderman/resolvers-pnpm";
 
 const args = process.argv.slice(2);
+
+const vars = {};
+for (const arg of args) {
+  const [key, value] = arg.split("=");
+  if (!value) continue;
+  vars[key] = value;
+}
+console.log(`running "${args[0]}" with args:`, vars);
+
+const buildArgsResolver = createInputResolver({
+  name: "build-args",
+  resolve: () => {
+    return Object.entries(vars).map(([key, value]) => ({
+      type: "virtual",
+      kind: "build-arg",
+      description: key,
+      hash: value,
+    }));
+  },
+});
 
 const shared = task({
   name: "shared",
@@ -41,6 +61,13 @@ const server = task({
       run: "pnpm dev",
       readyWhen: (output) => output.includes("Server listening on"),
     },
+    preview: {
+      run: "pnpm start --env-file=.env",
+      env: {
+        NODE_ENV: "production",
+      },
+    },
+    start: "pnpm start",
   },
   dependencies: [shared],
 });
@@ -60,18 +87,15 @@ const client = task({
           "vite.config.ts",
           pnpm.package(),
           shared.artifact("build"),
+          buildArgsResolver,
         ],
         outputs: ["dist"],
       },
+      env: {
+        VITE_API_HOST: vars["--host"],
+      },
     },
-    dev: {
-      run: "pnpm dev",
-      dependencies: [server],
-    },
-    preview: {
-      run: "pnpm preview",
-      dependencies: [server],
-    },
+    dev: "pnpm dev",
   },
 });
 

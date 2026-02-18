@@ -1,13 +1,16 @@
-const HOST = import.meta.env.VITE_API_HOST ?? "localhost"
-const PORT = import.meta.env.VITE_API_PORT
-  ? `:${import.meta.env.VITE_API_PORT}`
-  : ""
+const baseUrl = new URL(
+  import.meta.env.VITE_API_HOST ?? String(window.location)
+)
+
+const HOST = baseUrl.hostname
+const PORT = baseUrl.port ? `:${baseUrl.port}` : ""
 
 const APP_NAME =
   import.meta.env.VITE_APP_NAME ?? "Nodejs Multiplayer Game Starter"
 
-const HTTP_PROTOCOL = import.meta.env.DEV ? "http" : "https"
-const WS_PROTOCOL = import.meta.env.DEV ? "ws" : "wss"
+const USE_TLS = import.meta.env.PROD && window.location.protocol === "https:"
+const HTTP_PROTOCOL = USE_TLS ? "https" : "http"
+const WS_PROTOCOL = USE_TLS ? "wss" : "ws"
 
 export const env = {
   HTTP_BASE_URL: `${HTTP_PROTOCOL}://${HOST}${PORT}`,

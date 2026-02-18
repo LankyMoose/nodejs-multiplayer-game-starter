@@ -24,12 +24,10 @@ A pnpm monorepo for a multiplayer game: shared types and WebSocket contract, Fas
    ```
 
 2. **Server setup** (env + DB):
-
    - In `apps/server`: copy `.env.example` to `.env` and set `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, etc.
    - From `apps/server`: run `pnpm db:generate` and `pnpm db:migrate`.
 
 3. **Client env** (optional):
-
    - In `apps/client`: copy `.env.example` to `.env` if you need to change API host/port (defaults: `localhost:6969`).
 
 4. **Run everything** (from repo root):
@@ -42,10 +40,21 @@ A pnpm monorepo for a multiplayer game: shared types and WebSocket contract, Fas
 
 ## Scripts (root)
 
-| Script       | Description                                        |
-| ------------ | -------------------------------------------------- |
-| `pnpm dev`   | Run shared (watch), server, and client in dev mode |
-| `pnpm build` | Build shared, server, and client                   |
+| Script         | Description                                           |
+| -------------- | ----------------------------------------------------- |
+| `pnpm dev`     | Run shared (watch), server, and client in dev mode    |
+| `pnpm build`   | Build shared, server, and client                      |
+| `pnpm start`   | Runs the server and statically serves the client      |
+| `pnpm preview` | Same as above, but uses the server's local .env file. |
+
+### Port forwarding
+
+To enable port forwarding from your host machine:
+
+- start the tunnel service to your server (e.g. ngrok)
+- update the server .env file with the url
+- pass the url to the 'build' command: `pnpm build --host https://my-tunnel.ngrok.io`
+- run the server in preview mode: `pnpm preview`
 
 ## Scripts per package
 
