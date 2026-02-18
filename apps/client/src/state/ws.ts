@@ -75,11 +75,13 @@ export async function createWebSocket(): Promise<WebSocketConnection> {
   game.bindRouter(router)
 
   socket.addEventListener("error", () => {
+    if (game.getRouter() !== router) return
     game.bindRouter(null)
     onDisconnected()
   })
 
   socket.addEventListener("close", () => {
+    if (game.getRouter() !== router) return
     game.bindRouter(null)
     onDisconnected()
   })

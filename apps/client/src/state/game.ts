@@ -38,7 +38,7 @@ const waitingForReconnect = signal<{
 let currentRouter: ClientRouter<WebSocketContract> | null = null
 let unregister: (() => void) | null = null
 
-export function bindRouter(router: ClientRouter<WebSocketContract> | null) {
+function bindRouter(router: ClientRouter<WebSocketContract> | null) {
   if (router === currentRouter) {
     return
   }
@@ -275,6 +275,7 @@ export const game = {
     return waitingForReconnect.value
   },
   bindRouter,
+  getRouter: () => currentRouter,
   clearError() {
     error.value = null
   },
